@@ -20,7 +20,7 @@ extern int verbosity;
 /* Ingress Specific variables */
 bool attach_tc_egress_filter = false;
 char if_name[IF_NAMESIZE];
-char *egress_log_file_path = "/var/log/l3af/egress_ipfix.log";
+char *egress_log_file_path = "/var/log/tb/l3af/egress_ipfix.log";
 
 void sig_handler(int signo)
 {

@@ -18,7 +18,7 @@ extern int verbosity;
 const char ingress[] = "ingress_flow_monitoring";
 
 /* Ingress Specific variables */
-char *ingress_log_file_path = "/var/log/l3af/ingress_ipfix.log";
+char *ingress_log_file_path = "/var/log/tb/l3af/ingress_ipfix.log";
 bool attach_tc_ingress_filter = false;
 char if_name[IF_NAMESIZE];
 
