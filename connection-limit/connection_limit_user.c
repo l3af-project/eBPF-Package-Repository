@@ -113,11 +113,7 @@ void log_timestamp(char *log_ts)
     nowtime = tv.tv_sec;
     nowtm = localtime(&nowtime);
     strftime(tmbuf, TIMESTAMP_LEN, "%Y-%m-%d %H:%M:%S", nowtm);
-    #ifdef DARWIN
-    snprintf(log_ts, TIMESTAMP_LEN, "%s.%06d", tmbuf, tv.tv_usec);
-    #else
-    snprintf(log_ts, TIMESTAMP_LEN, "%s.%06ld", tmbuf, tv.tv_usec);
-    #endif
+    snprintf(log_ts, TIMESTAMP_LEN+DATE_LEN, "%s.%06ld", tmbuf, tv.tv_usec);
 }
 
 /* Set the logging output to the default log file configured */

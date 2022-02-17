@@ -16,6 +16,7 @@
 #include <time.h>
 
 #define TIMESTAMP_LEN 64
+#define DATE_LEN 21
 
 FILE *info;
 
