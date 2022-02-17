@@ -32,3 +32,5 @@ int tc_egress_pass_through(struct __sk_buff *skb) {
   bpf_tail_call(skb, &tc_egress_root_array, 0);
   return TC_ACT_OK;
 }
+
+char _license[] SEC("license") = "GPL";
