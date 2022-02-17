@@ -34,7 +34,7 @@
 
 /* EGRESS MAP FOR FLOW RECORD INFO */
 struct bpf_elf_map SEC("maps")  egress_flow_record_info_map = {
-    .type           = BPF_MAP_TYPE_LRU_HASH,
+    .type           = BPF_MAP_TYPE_HASH,
     .size_key       = sizeof(u32),
     .size_value     = sizeof(flow_record_t),
     .pinning        = PIN_GLOBAL_NS,
@@ -43,7 +43,7 @@ struct bpf_elf_map SEC("maps")  egress_flow_record_info_map = {
 
 /* EGRESS MAP FOR LAST RECORD PACKET INFO */
 struct bpf_elf_map SEC("maps")  last_egress_flow_record_info_map = {
-    .type           = BPF_MAP_TYPE_LRU_HASH,
+    .type           = BPF_MAP_TYPE_HASH,
     .size_key       = sizeof(u32),
     .size_value     = sizeof(flow_record_t),
     .pinning        = PIN_GLOBAL_NS,
