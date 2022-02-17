@@ -41,7 +41,8 @@ jobs:
 
       - name: Set env variables
         run: |
-          echo "REPO=ratelimiting" >> $GITHUB_ENV
+          echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
+          echo "PROG=ratelimiting" >> $GITHUB_ENV
           echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
           echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
       
@@ -54,9 +55,9 @@ jobs:
       - name: Clone kernel function repository
         uses: actions/checkout@v2
         with:
-          path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}
+          path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
 
-      - name: Build kernel function
+      - name: Build eBPF Programs
         run: |
-          cd $LINUX_SRC_PATH/$BPF_PATH/$REPO
+          cd $LINUX_SRC_PATH/$BPF_PATH/$REPO/$PROG
           make
