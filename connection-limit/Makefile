@@ -3,8 +3,7 @@
 LINUX_SRC_PATH ?= /usr/src/linux
 BPF_SAMPLES_PATH := $(LINUX_SRC_PATH)/samples/bpf
 TOOLS_PATH := $(BPF_SAMPLES_PATH)/../../tools
-L3AF_SRC_PATH := $(BPF_SAMPLES_PATH)/connection-limit
-
+L3AF_SRC_PATH := $(CURDIR)
 
 # List of programs to build
 hostprogs-y := connection_limit
@@ -15,7 +14,7 @@ LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
 CGROUP_HELPERS := ../../../tools/testing/selftests/bpf/cgroup_helpers.o
 TRACE_HELPERS := ../../../tools/testing/selftests/bpf/trace_helpers.o
 
-connection_limit-objs := connection_limit_user.o ../bpf_load.o
+connection_limit-objs := connection_limit_user.o ../../bpf_load.o
 
 # Tell kbuild to always build the programs
 always := $(hostprogs-y)
