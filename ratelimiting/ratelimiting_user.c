@@ -73,6 +73,7 @@ void log_timestamp(char *log_ts) {
     gettimeofday(&tv, NULL);
     nowtime = tv.tv_sec;
     nowtm = localtime(&nowtime);
+    strftime(tmbuf, DATE_LEN, "%Y-%m-%d %H:%M:%S", nowtm);
     snprintf(log_ts, DATE_LEN+TIMESTAMP_LEN, "%s.%06ld", tmbuf, tv.tv_usec);
 }
 
