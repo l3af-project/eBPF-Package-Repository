@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
 
-LINUX_SRC_PATH := /usr/src/linux
+LINUX_SRC_PATH ?= /usr/src/linux
 BPF_SAMPLES_PATH := $(LINUX_SRC_PATH)/samples/bpf
 TOOLS_PATH := $(BPF_SAMPLES_PATH)/../../tools
 L3AF_SRC_PATH := $(CURDIR)

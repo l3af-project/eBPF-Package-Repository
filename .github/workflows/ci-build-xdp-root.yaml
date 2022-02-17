@@ -1,4 +1,4 @@
-name: CI build for ratelimiting
+name: CI build for xdp-root
 on:
   pull_request: {}
   push:
@@ -42,7 +42,7 @@ jobs:
       - name: Set env variables
         run: |
           echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
-          echo "PROG=ratelimiting" >> $GITHUB_ENV
+          echo "PROG=xdp-root" >> $GITHUB_ENV
           echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
           echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
       
