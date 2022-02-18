@@ -3,7 +3,7 @@ The <a href=https://datatracker.ietf.org/doc/html/rfc7011> IPFIX(IP Flow Informa
 This repo contains eBPF tc programs, which are using in ingress/egress to generate flow records from packets at an observation point and exports using IPFIX to a flow collector.
 Currently, It supports both TCP and ICMP flows out-of-box. Flows templates are different for each of these.
 
-Each TCP flow contains stats about following IPFIX information elements (<a href=https://www.iana.org/assignments/ipfix/ipfix.xhtml> List of IPFIX elements</a>)
+Each TCP flow contains stats about following IPFIX information elements(<a href=https://www.iana.org/assignments/ipfix/ipfix.xhtml>List of IPFIX elements</a>)
 
 <table>
 <thead>
@@ -113,11 +113,3 @@ eBPF programs are attached to traffic control Ingress / Egress hooks to extract 
 
 ### How to build
 <a href=https://github.com/l3af-project/l3af-arch/blob/main/dev_environment/>L3AF Development Environment</a> contains steps to build and test flow exporter using vagrant
-
-### How to contribute
-Contributions are always welcome! Take a look at [Contributing guide](https://github.com/l3af-project/l3af-arch/blob/main/CONTRIBUTING.md) to get started
-
-### Contact
-We love hearing from you and encourage you to join our community.
-- [L3af slack](https://join.slack.com/t/l3afworkspace/shared_invite/zt-y2bbi7d2-FplDi4J~j8Y97CrGXttZmg)
-
