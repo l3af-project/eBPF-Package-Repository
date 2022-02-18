@@ -73,12 +73,8 @@ void log_timestamp(char *log_ts) {
     gettimeofday(&tv, NULL);
     nowtime = tv.tv_sec;
     nowtm = localtime(&nowtime);
-    strftime(tmbuf, TIMESTAMP_LEN, "%Y-%m-%d %H:%M:%S", nowtm);
-    #ifdef DARWIN
-    snprintf(log_ts, TIMESTAMP_LEN, "%s.%06d", tmbuf, tv.tv_usec);
-    #else
-    snprintf(log_ts, TIMESTAMP_LEN, "%s.%06ld", tmbuf, tv.tv_usec);
-    #endif
+    strftime(tmbuf, DATE_LEN, "%Y-%m-%d %H:%M:%S", nowtm);
+    snprintf(log_ts, DATE_LEN+TIMESTAMP_LEN, "%s.%06ld", tmbuf, tv.tv_usec);
 }
 
 static int get_length(const char *str)

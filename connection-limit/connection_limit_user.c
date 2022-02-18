@@ -102,8 +102,7 @@ static void usage(char *argv[])
 }
 
 /* Set log timestamps */
-void log_timestamp(char *log_ts)
-{
+void log_timestamp(char *log_ts) {
     struct timeval tv;
     time_t nowtime;
     struct tm *nowtm;
@@ -112,12 +111,8 @@ void log_timestamp(char *log_ts)
     gettimeofday(&tv, NULL);
     nowtime = tv.tv_sec;
     nowtm = localtime(&nowtime);
-    strftime(tmbuf, TIMESTAMP_LEN, "%Y-%m-%d %H:%M:%S", nowtm);
-    #ifdef DARWIN
-    snprintf(log_ts, TIMESTAMP_LEN, "%s.%06d", tmbuf, tv.tv_usec);
-    #else
-    snprintf(log_ts, TIMESTAMP_LEN, "%s.%06ld", tmbuf, tv.tv_usec);
-    #endif
+    strftime(tmbuf, DATE_LEN, "%Y-%m-%d %H:%M:%S", nowtm);
+    snprintf(log_ts, DATE_LEN+TIMESTAMP_LEN, "%s.%06ld", tmbuf, tv.tv_usec);
 }
 
 /* Set the logging output to the default log file configured */
