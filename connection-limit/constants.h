@@ -1,5 +1,5 @@
 // Copyright Contributors to the L3AF Project.
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
 #ifndef __CONSTANTS_H__
 #define __CONSTANTS_H__

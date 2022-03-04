@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
 /* Copyright (c) 2016 John Fastabend <john.r.fastabend@intel.com>
  *
