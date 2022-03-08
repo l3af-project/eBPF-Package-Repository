@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-2.0
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
 LINUX_SRC_PATH ?= /usr/src/linux
 BPF_SAMPLES_PATH := $(LINUX_SRC_PATH)/samples/bpf
