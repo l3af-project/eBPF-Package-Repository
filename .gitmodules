@@ -1,0 +1,4 @@
+[submodule "external/ebpf-for-windows"]
+	path = external/ebpf-for-windows
+	url = https://github.com/dthaler/ebpf-for-windows.git
+	branch = headers
