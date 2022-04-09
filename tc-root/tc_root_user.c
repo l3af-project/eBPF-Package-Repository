@@ -297,7 +297,7 @@ int main(int argc, char **argv) {
                 break;
             case 'c' :
                 cmd = optarg;
-                if (!((strcmp(cmd, "start") != 0) || (strcmp(cmd, "stop") != 0))) {
+                if (!((strcmp(cmd, "start") == 0) || (strcmp(cmd, "stop") == 0))) {
                     usage(argv);
                     return EXIT_FAILURE;
                 }

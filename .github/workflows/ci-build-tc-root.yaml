@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build:
+  tc-root-build-ubuntu:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:bionic 

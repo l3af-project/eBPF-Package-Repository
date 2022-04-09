@@ -7,18 +7,52 @@
 #include <linux/bpf.h>
 #include <signal.h>
 #include <ctype.h>
+#ifdef __linux__
 #include <unistd.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#endif
 #include <getopt.h>
+#ifdef __linux__
 #include <net/if.h>
+#endif
 #include <time.h>
 #include <string.h>
 #include <limits.h>
 #include <stdlib.h>
 
 #include "bpf_load.h"
+#ifdef __linux__
 #include "bpf_util.h"
+#endif
+#ifdef WIN32
+#include <io.h>
+#include <winsock2.h>
+#include <netioapi.h>
+#define sleep(seconds) Sleep((seconds) * 1000)
+char* strsep(char** stringp, const char* delim)
+{
+    static char* next_token = NULL;
+    char* input = *stringp;
+    *stringp = strtok_s(input, delim, &next_token);
+    return input;
+}
+#define close _close
+#define strdup _strdup
+int gettimeofday(struct timeval* tv, struct timezone* tz)
+{
+    FILETIME ft;
+    ULARGE_INTEGER ui;
+    GetSystemTimeAsFileTime(&ft);
+    ui.LowPart = ft.dwLowDateTime;
+    ui.HighPart = ft.dwHighDateTime;
+    ui.QuadPart /= 10; // Convert to usec.
+    tv->tv_sec = (long)(ui.QuadPart / 1000000);
+    tv->tv_usec = ui.QuadPart % 1000000;
+    return 0;
+}
+#include "bpf/bpf.h"
+#endif
 #include "bpf/libbpf.h"
 
 #include "constants.h"
@@ -144,10 +178,18 @@ static void signal_handler(int signal)
 /* Get monotonic clock time in ns */
 static __u64 time_get_ns(void)
 {
+#ifdef __linux__
     struct timespec ts;
 
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return ts.tv_sec * 1000000000ull + ts.tv_nsec;
+#endif
+#ifdef WIN32
+    LARGE_INTEGER frequency, counter;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&counter);
+    return (1000000000 * counter.QuadPart) / frequency.QuadPart;
+#endif
 }
 
 /* Delete stale map entries(LRU) based on the timestamp at which
@@ -228,7 +270,9 @@ int main(int argc, char **argv)
     char bpf_obj_file[256];
     char ports[2048];
     verbosity = LOG_INFO;
+#ifdef __linux__
     struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
+#endif
     int len = 0;
     snprintf(bpf_obj_file, sizeof(bpf_obj_file), "%s_kern.o", argv[0]);
 
@@ -272,10 +316,12 @@ int main(int argc, char **argv)
                 return EXIT_FAILURE;
         }
     }
+#ifdef __linux__
     if (setrlimit(RLIMIT_MEMLOCK, &r)) {
         perror("setrlimit(RLIMIT_MEMLOCK)");
         exit(EXIT_FAILURE);
     }
+#endif
     set_logfile();
 
     __u64 ckey = 0, rkey = 0, dkey = 0, pkey = 0;
@@ -356,7 +402,9 @@ int main(int argc, char **argv)
     /* Handle signals and exit clean */
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
+#ifdef __linux__
     signal(SIGHUP, signal_handler);
+#endif
 
     while(1)
     {
