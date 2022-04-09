@@ -7,15 +7,30 @@ static const char *__doc__ =
         "  The bpf-object gets attached via XDP\n";
 
 #include <linux/bpf.h>
+#ifdef __linux__
 #include <linux/if_link.h>
 #include <net/if.h>
+#endif
 #include <stdio.h>
+#ifdef __linux__
 #include <unistd.h>
+#endif
 #include <getopt.h>
+#ifdef __linux__
 #include <sys/resource.h>
+#endif
 
 #include "bpf_load.h"
+#ifdef __linux__
 #include "bpf_util.h"
+#endif
+#ifdef WIN32
+#include <winsock2.h>
+#include <netioapi.h>
+#include <stdlib.h>
+#include "bpf/libbpf.h"
+#define ebpf_obj_unpin ebpf_object_unpin
+#endif
 #include <bpf/bpf.h>
 
 static int ifindex_in;
@@ -69,7 +84,9 @@ int main(int argc, char **argv)
     char *cmd = NULL;
     char *iface = NULL;
     int longindex = 0;
+#ifdef __linux__
     struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
+#endif
 
     /* Parse commands line args */
     while ((opt = getopt_long(argc, argv, "hq",
@@ -77,7 +94,7 @@ int main(int argc, char **argv)
         switch (opt) {
             case 'c':
                 cmd = optarg;
-                if (!((strcmp(cmd, "start") != 0) || (strcmp(cmd, "stop") != 0))) {
+                if (!((strcmp(cmd, "start") == 0) || (strcmp(cmd, "stop") == 0))) {
                     usage(argv);
                     return EXIT_FAILURE;
                 }
@@ -99,10 +116,16 @@ int main(int argc, char **argv)
     }
 
     ifindex_in = if_nametoindex(iface);
+#ifdef _WIN32
+    _splitpath_s(argv[0], NULL, 0, NULL, 0, filename, sizeof(filename), NULL, 0);
+    strcat_s(filename, sizeof(filename), "_kern.o");
+#endif
+#ifdef __linux__
     snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
     if (setrlimit(RLIMIT_MEMLOCK, &r) < 0) {
 	    perror("setrlimit failed");
     }
+#endif
 
     if (strcmp(cmd,"start") == 0) {
         if (load_bpf_file(filename)) {
