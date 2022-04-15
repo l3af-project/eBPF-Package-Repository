@@ -33,4 +33,4 @@ int xdp_pass_through(struct xdp_md *ctx) {
 	return XDP_PASS;
 }
 
-char _license[] SEC("license") = "GPL";
+char _license[] SEC("license") = "Dual BSD/GPL";

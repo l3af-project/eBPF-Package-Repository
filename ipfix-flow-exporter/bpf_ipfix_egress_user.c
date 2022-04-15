@@ -1,5 +1,5 @@
 // Copyright Contributors to the L3AF Project.
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
 static const char *__doc__=" BPF IPFIX : To get packet flow data by handling the packet and create IPFIX.\n\n";
 
