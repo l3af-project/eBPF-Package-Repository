@@ -87,4 +87,6 @@ jobs:
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} ${{env.SOLUTION_FILE_PATH}} ${{env.BUILD_OPTIONS}}
+      run: |
+        cmake -B build
+        cmake --build build -j $(nproc) --config ${{env.BUILD_CONFIGURATION}}
