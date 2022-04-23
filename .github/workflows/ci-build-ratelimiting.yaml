@@ -85,16 +85,6 @@ jobs:
         choco install -y llvm
         echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-    # We temporarily need to build eBPF for Windows from source, until we can install a devkit.
-    - name: Build ebpf-for-windows
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-        cd external\ebpf-for-windows
-        nuget restore ebpf-for-windows.sln
-        cmake -G "Visual Studio 16 2019" -S external\ebpf-verifier -B external\ebpf-verifier\build
-        cmake -G "Visual Studio 16 2019" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF
-        msbuild /m /p:Configuration=Release /p:Platform=x64 ebpf-for-windows.sln
-
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
