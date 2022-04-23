@@ -20,10 +20,7 @@ endif()
 #
 
 include_directories(../windows)
-include_directories(./build/packages/eBPF-for-Windows.0.1.1/build/native/include)
-include_directories(./build/packages/eBPF-for-Windows.0.1.1/build/native/include/uapi)
 include_directories(../external/win-c/include)
-link_directories(./build/packages/eBPF-for-Windows.0.1.1/build/native/lib)
 add_executable(ratelimiting ratelimiting_user.c ../external/win-c/source/getopt.c ../windows/bpf_load.c)
 target_link_libraries(ratelimiting PRIVATE iphlpapi)
 target_link_libraries(ratelimiting PRIVATE ebpfapi)
@@ -35,7 +32,7 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS) # Allow use of strerror
 
 add_custom_target(ratelimiting_kern ALL
                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/build/ratelimiting_kern.o)
-set(CFLAGS_KERN -g -target bpf -Wall -O2 -I ${CMAKE_CURRENT_SOURCE_DIR}/build/packages/eBPF-for-Windows.0.1.1/build/native/include -I ${CMAKE_CURRENT_SOURCE_DIR}/build/packages/eBPF-for-Windows.0.1.1/build/native/include/uapi)
+set(CFLAGS_KERN -g -target bpf -Wall -O2 $(ClangIncludes))
 
 # We use custom commands here so that the same command will be used on
 # Linux and Windows (where cmake would normally use cl instead of clang).
