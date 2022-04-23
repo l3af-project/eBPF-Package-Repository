@@ -11,7 +11,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     if (NOT NUGET)
         message("ERROR: You must first install nuget.exe from https://www.nuget.org/downloads")
     else ()
-        exec_program(${NUGET} ARGS install "ebpf-for-windows" -OutputDirectory ${CMAKE_BINARY_DIR}/packages)
+        exec_program(${NUGET} ARGS install "ebpf-for-windows" -Version 0.1.3 -ExcludeVersion -OutputDirectory ${CMAKE_BINARY_DIR}/packages)
     endif()
 endif()
 
@@ -25,6 +25,7 @@ add_executable(xdp_root xdp_root.c ../external/win-c/source/getopt.c ../windows/
 target_link_libraries(xdp_root PRIVATE iphlpapi)
 target_link_libraries(xdp_root PRIVATE ebpfapi)
 add_definitions(-D_CRT_SECURE_NO_WARNINGS) # Allow use of strerror
+set_property(TARGET xdp_root PROPERTY VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/eBPF-for-Windows/build/native/ebpf-for-windows.props)
 
 #
 # eBPF program configuration
@@ -33,6 +34,7 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS) # Allow use of strerror
 add_custom_target(xdp_root_kern ALL
                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/build/xdp_root_kern.o)
 set(CFLAGS_KERN -g -target bpf -Wall -O2 $(ClangIncludes))
+set_property(TARGET xdp_root_kern PROPERTY VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/eBPF-for-Windows/build/native/ebpf-for-windows.props)
 
 # We use custom commands here so that the same command will be used on
 # Linux and Windows (where cmake would normally use cl instead of clang).
