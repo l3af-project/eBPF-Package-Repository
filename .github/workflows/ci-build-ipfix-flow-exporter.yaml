@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build:
+  ipfix-flow-exporter-build-ubuntu:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:bionic 

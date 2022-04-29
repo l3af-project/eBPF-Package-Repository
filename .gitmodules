@@ -1,0 +1,3 @@
+[submodule "external/win-c"]
+	path = external/win-c
+	url = https://github.com/takamin/win-c.git
