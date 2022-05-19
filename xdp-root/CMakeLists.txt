@@ -11,7 +11,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     if (NOT NUGET)
         message("ERROR: You must first install nuget.exe from https://www.nuget.org/downloads")
     else ()
-        exec_program(${NUGET} ARGS install "ebpf-for-windows" -Version 0.1.3 -ExcludeVersion -OutputDirectory ${CMAKE_BINARY_DIR}/packages)
+        exec_program(${NUGET} ARGS install "ebpf-for-windows" -Version 0.1.4 -ExcludeVersion -OutputDirectory ${CMAKE_BINARY_DIR}/packages)
     endif()
 endif()
 
