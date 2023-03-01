@@ -25,7 +25,7 @@ _# Create a ".config" file with default options from the current OS build config
 cd /usr/src/linux
 make defconfig
 ```
-_# tc-root_ [https:github.com/l3af-project/eBPF-Package-Repository/tree/main/tc-root] : This is the root program that enables chaining of multiple eBPF programs on a single network interface. Download, build, and execute the tc-root program on the interface you want to mirror prior to proceeding to the next steps.
+_# [tc-root](../tc_root)_ : This is the root program that enables chaining of multiple eBPF programs on a single network interface. Download, build, and execute the tc-root program on the interface you want to mirror prior to proceeding to the next steps.
 
 
 Installation
