@@ -36,7 +36,6 @@ HOSTLDLIBS_test_overhead        += -lrt
 HOSTLDLIBS_mirroring  += -pthread -lm -lz -lpcap -lcrypto -lcurl -g -lpthread
 
 # Allows pointing LLC/CLANG to a LLVM backend with bpf support, redefine on cmdline:
-#  make samples/bpf/ LLC=~/git/llvm/build/bin/llc CLANG=~/git/llvm/build/bin/clang
 LLC ?= llc
 CLANG ?= clang
 LLVM_OBJCOPY ?= llvm-objcopy

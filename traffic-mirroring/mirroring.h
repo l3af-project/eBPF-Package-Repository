@@ -72,9 +72,6 @@ static int verbose = 1;
 static int tc_attach_bpf(char* dev, char* bpf_obj, char* dir);
 static bool validate_ifname(const char* input_ifname, char *output_ifname);
 static bool validate_address(char* input_address, network_addr_t output_address[], int *count);
-// static void update_ports(int map_fd, char *ports, char *prog_type, char *port_type);
-// static void bin(unsigned n);
-// static void printKthBit(unsigned int n, unsigned int k)
 
 
 /* Port separator */

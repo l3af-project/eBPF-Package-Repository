@@ -1001,8 +1001,6 @@ int main(int argc, char **argv)
         ret = EXIT_FAILURE;
         exit_clean(ret);
     }
-    // errno will be set to 2 if only using ingress as not egress map will be
-    // found
     egress_src_port_fd = bpf_obj_get(egress_src_port_mapfile);
     if (egress_src_port_fd < 0 && (strcmp(direction, EGRESS) == 0)) {
         log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
@@ -1020,7 +1018,6 @@ int main(int argc, char **argv)
         ret = EXIT_FAILURE;
         exit_clean(ret);
     }
-    // egress_proto_fd
     egress_proto_fd = bpf_obj_get(egress_proto_mapfile);
     log_info("egress_proto_fd: %d \n", egress_proto_fd);
     if (egress_proto_fd < 0 && (strcmp(direction, EGRESS) == 0)) {

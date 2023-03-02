@@ -79,40 +79,6 @@ static int tc_egress_attach_bpf(const char* dev, const char* bpf_obj)
     char cmd[CMD_MAX];
     int ret = 0;
     int pid, status, childpid; 
-#if 0
-    /* Step-1: Delete clsact, which also remove filters */
-    /* TODO Delete only this specific filter, not the entire device */
-    memset(&cmd, 0, CMD_MAX);
-    snprintf(cmd, CMD_MAX,
-         "%s qdisc del dev %s clsact 2> /dev/null",
-         tc_cmd, dev);
-    if (verbose) printf(" - Run: %s\n", cmd);
-    ret = system(cmd);
-    if (!WIFEXITED(ret)) {
-        fprintf(stderr,
-            "ERR(%d): Cannot exec tc cmd\n Cmdline:%s\n",
-            WEXITSTATUS(ret), cmd);
-        exit(EXIT_FAILURE);
-    } else if (WEXITSTATUS(ret) == 2) {
-        /* Unfortunately TC use same return code for many errors */
-        if (verbose) printf(" - (First time loading clsact?)\n");
-    }
-
-    /* Step-2: Attach a new clsact qdisc */
-    /* TODO Add the device only if it is not existing */
-    memset(&cmd, 0, CMD_MAX);
-    snprintf(cmd, CMD_MAX,
-         "%s qdisc add dev %s clsact",
-         tc_cmd, dev);
-    if (verbose) printf(" - Run: %s\n", cmd);
-    ret = system(cmd);
-    if (ret) {
-        fprintf(stderr,
-            "ERR(%d): tc cannot attach qdisc hook\n Cmdline:%s\n",
-            WEXITSTATUS(ret), cmd);
-        exit(EXIT_FAILURE);
-    }
-#endif
 
     /* Step-3: Attach BPF program/object as egress filter */
     char *filter_cmd[] = {tc, "filter", "add", "dev", dev, "egress",
@@ -218,7 +184,7 @@ int main(int argc, char **argv)
 
     memset(ifname, 0, IF_NAMESIZE); /* Can be used uninitialized */
 
-    /* Parse commands line args */
+    /* Parse command line args */
     while ((opt = getopt_long(argc, argv, "hq",
                   long_options, &longindex)) != -1) {
         switch (opt) {
