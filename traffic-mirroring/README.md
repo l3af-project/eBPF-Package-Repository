@@ -1,9 +1,7 @@
 Traffic Mirroring Tool (TMT)
 =================
 This repository contains an eBPF program that enables mirroring traffic from a host (source) to a remote host (collector) by using tc hooks.
-Additional capabilities are provided with which traffic can be filtered based on standard parameters(source address, destination address, source port, remote port and protocol) at the localhost itself to save the bandwidth.
-Optionally traffic can also be trimmed so that only headers are mirrored.
-Traffic is sent over GUE overlay to the remote host. GUE overlay has to be configured on local and remote ends as shown in the usage section.
+Additional capabilities are provided with which traffic can be filtered based on standard parameters(source address, destination address, source port, remote port and protocol) at the localhost itself to save the bandwidth. Traffic is sent over GUE overlay to the remote host. GUE overlay has to be configured on local and remote ends as shown in the usage section.
 
 Prerequisites
 =================
