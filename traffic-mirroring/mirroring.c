@@ -21,6 +21,7 @@ static const char *__doc__ =
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -356,6 +357,11 @@ FILE *set_log_file()
 {
     if (info != NULL) {
         return info;
+    }
+    struct stat st = {0};
+    //Creates LOG_PATH directory if not present
+    if (stat(LOG_PATH, &st) == -1) {
+        mkdir(LOG_PATH, 0755);
     }
     fprintf(stdout, "logfile is %s\n", DEFAULT_LOGFILE);
     info = fopen(DEFAULT_LOGFILE, "a");

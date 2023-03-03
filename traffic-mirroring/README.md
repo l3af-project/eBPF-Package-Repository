@@ -70,7 +70,7 @@ Usage
 =====
 * **Ingress Mirroring**  
 
-/usr/src/linux/samples/bpf/traffic-mirroring/l3af_traffic_mirroring/mirroring \\  
+/usr/src/linux/samples/bpf/eBPF-Package-Repository/traffic-mirroring/l3af_traffic_mirroring/mirroring \\ \
 \--iface=\<interface name\> \\  
 \--direction=ingress \\  
 \--map-name=\<location of the tc-root map for chaining\> \\  
@@ -88,7 +88,7 @@ Usage
 
 * **Egress Mirroring**
 
-/usr/src/linux/samples/bpf/traffic-mirroring/l3af_traffic_mirroring/mirroring \\  
+/usr/src/linux/samples/bpf/eBPF-Package-Repository/traffic-mirroring/l3af_traffic_mirroring/mirroring \\ \
 \--iface=\<interface name\> \\  
 \--direction=egress \\  
 \--map-name=\<location of the tc-root map for chaining\> \\  

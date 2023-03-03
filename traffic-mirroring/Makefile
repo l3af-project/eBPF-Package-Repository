@@ -12,7 +12,7 @@ hostprogs-y += mirroring
 # Libbpf dependencies
 LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
 
-mirroring-objs := mirroring.o ../bpf_load.o
+mirroring-objs := mirroring.o ../../bpf_load.o
 
 
 # Tell kbuild to always build the programs
