@@ -12,7 +12,7 @@
 #include <uapi/linux/udp.h>
 #include <uapi/linux/pkt_cls.h>
 
-#include "bpf_helpers.h"
+#include "lib/bpf_helpers.h"
 #include "bpf_ipfix_kern_common.h"
 
 #define DEBUG 1

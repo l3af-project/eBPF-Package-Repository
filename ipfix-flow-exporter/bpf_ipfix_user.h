@@ -27,7 +27,6 @@
 #include "p2f.h"
 #include "ipfix.h"
 #include "log.h"
-#include "bpf_load.h"
 #include "bpf_util.h"
 
 const char* egress_bpf_map ;

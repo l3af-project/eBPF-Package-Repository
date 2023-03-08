@@ -48,9 +48,11 @@ jobs:
       
       - name: Clone dependencies 
         run: |
-          git clone --branch v5.1 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
+          git clone --branch v5.15 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
           cd $LINUX_SRC_PATH
           make defconfig
+          make prepare
+          make headers_install
           
       - name: Clone kernel function repository
         uses: actions/checkout@v2
