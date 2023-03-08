@@ -8,8 +8,8 @@
 #include <uapi/linux/bpf.h>
 #include <uapi/linux/pkt_cls.h>
 #include <linux/skbuff.h>
-#include "bpf_endian.h"
-#include "bpf_helpers.h"
+#include "lib/bpf_endian.h"
+#include "lib/bpf_helpers.h"
 
 #define ROOT_ARRAY_SIZE 1
 #define PIN_GLOBAL_NS 2
