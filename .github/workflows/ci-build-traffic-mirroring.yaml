@@ -1,0 +1,72 @@
+# Copyright Contributors to the L3AF Project.
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+#
+# For documentation on the github environment, see
+# https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners
+#
+# For documentation on the syntax of this file, see
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+
+name: CI build for traffic-mirroring
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
+
+jobs:
+  traffic-mirroring-build-ubuntu:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:bionic 
+
+    steps:
+      - name: Set up build environment
+        run: |
+          apt-get update
+          apt-get install -y bc \
+          bison \
+          build-essential \
+          clang \
+          curl \
+          exuberant-ctags \
+          flex \
+          gcc-8 \
+          gcc-multilib \
+          git \
+          gnutls-bin \
+          libc6-dev \
+          libcurl4-openssl-dev \
+          libelf-dev \
+          libjson-c-dev \
+          libncurses5-dev \
+          libpcap-dev \
+          libssl-dev \
+          linux-headers-generic \
+          linux-tools-common \
+          linux-tools-generic \
+          llvm \
+          rsync
+
+      - name: Set env variables
+        run: |
+          echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
+          echo "PROG=traffic-mirroring" >> $GITHUB_ENV
+          echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
+          echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
+      
+      - name: Clone dependencies 
+        run: |
+          git clone --branch v5.1 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
+          cd $LINUX_SRC_PATH
+          make defconfig
+          
+      - name: Clone kernel function repository
+        uses: actions/checkout@v2
+        with:
+          path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
+
+      - name: Build eBPF Programs
+        run: |
+          cd $LINUX_SRC_PATH/$BPF_PATH/$REPO/$PROG
+          make
