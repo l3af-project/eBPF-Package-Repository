@@ -36,10 +36,10 @@ struct bpf_map_def SEC("maps") rl_config_map = {
 /* Maintains the timestamp of a window and the total number of
  * connections received in that window(window = 1 sec interval) */
 struct bpf_map_def SEC("maps") rl_window_map = {
-	.type		= BPF_MAP_TYPE_HASH,
+	.type		= BPF_MAP_TYPE_LRU_HASH,
 	.key_size	= sizeof(uint64_t),
 	.value_size	= sizeof(uint64_t),
-	.max_entries	= 100,
+	.max_entries	= 1000,
 };
 
 /* Maintains the total number of connections received(TCP-SYNs)
