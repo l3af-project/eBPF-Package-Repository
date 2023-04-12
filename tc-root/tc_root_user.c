@@ -207,10 +207,14 @@ static bool validate_ifname(const char *input_ifname, char *output_ifname) {
     if (len >= IF_NAMESIZE) {
         return false;
     }
+    // check if interface name is null
+    if (*input_ifname == '\0') {
+        return false;
+    }
     for (i = 0; i < len; i++) {
         char c = input_ifname[i];
-
-        if (!(isalpha(c) || isdigit(c) || c == '-'))
+        // Check for each character of input_ifname  if it contains '/' or whitespace characters
+        if (c == '/' || isspace(c))
             return false;
     }
     strncpy(output_ifname, input_ifname, len);
