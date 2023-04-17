@@ -1,0 +1,104 @@
+# Copyright Contributors to the L3AF Project.
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+#
+# For documentation on the github environment, see
+# https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners
+#
+# For documentation on the syntax of this file, see
+# https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/about-code-scanning-with-codeql
+
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "main" ]
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:bionic
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'cpp' ]
+        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
+        # Use only 'java' to analyze code written in Java, Kotlin or both
+        # Use only 'javascript' to analyze code written in JavaScript, TypeScript or both
+        # Learn more about CodeQL language support at https://aka.ms/codeql-docs/language-support
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+
+    - name: Set up build environment
+      run: |
+        apt-get update
+        apt-get install -y bc \
+        bison \
+        build-essential \
+        clang \
+        curl \
+        exuberant-ctags \
+        flex \
+        gcc-8 \
+        gcc-multilib \
+        git \
+        gnutls-bin \
+        libc6-dev \
+        libcurl4-openssl-dev \
+        libelf-dev \
+        libjson-c-dev \
+        libncurses5-dev \
+        libpcap-dev \
+        libssl-dev \
+        linux-headers-generic \
+        linux-tools-common \
+        linux-tools-generic \
+        llvm \
+        rsync
+
+    - name: Set env variables
+      run: |
+        echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
+        echo "PROG=xdp-root" >> $GITHUB_ENV
+        echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
+        echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
+
+    - name: Clone dependencies
+      run: |
+        git clone --branch v5.1 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
+        cd $LINUX_SRC_PATH
+        make defconfig
+
+    - name: Clone eBPF-Package-Repository
+      uses: actions/checkout@v2
+      with:
+        path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
+
+    - run: |
+        echo "Run, Build Application using script"
+        ./buildscript.sh
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
