@@ -85,22 +85,22 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     void *data_end = (void *)(long)ctx->data_end;
     void *data = (void *)(long)ctx->data;
 
-    struct ethhdr *eth = data;
-
     /* Check if it is a valid ethernet packet */
-    if (data + sizeof(*eth) > data_end)
-        return XDP_DROP;
+    if (data + sizeof(struct ethhdr) + 1 > data_end)
+        return XDP_PASS;
 
-    /* Ignore other than ethernet packets */
+    struct ethhdr *eth = data;
     uint16_t eth_type = eth->h_proto;
+
+    /* Ignore other than IPV4 packets */
     if (ntohs(eth_type) != ETH_P_IP) {
         return XDP_PASS;
     }
 
     struct iphdr *iph = (struct iphdr *)(data + sizeof(struct ethhdr));
-    __u8 l4_offset = iph->ihl * 4; // ip header length
+    __u8 l4_offset = iph->ihl * 4; // ipv4 header length
 
-    /* Ignore other than IP packets */
+    /* Check if it is a valid IPV4 packet */
     if (iph->ihl < 5 || ((unsigned char *)iph + l4_offset) > data_end)
         return XDP_PASS;
 
