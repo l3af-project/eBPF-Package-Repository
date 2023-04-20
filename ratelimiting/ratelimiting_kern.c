@@ -111,7 +111,7 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     struct tcphdr *tcph = (struct tcphdr *)((unsigned char *)iph + l4_offset);
     __u16 data_offset = tcph->doff * 4; // tcp header length
 
-    /* Check if its valid tcp packet */
+    /* Check if it's a valid TCP packet */
     if (tcph->doff < 5 || ((unsigned char *)tcph + data_offset) > data_end)
         return XDP_PASS;
 

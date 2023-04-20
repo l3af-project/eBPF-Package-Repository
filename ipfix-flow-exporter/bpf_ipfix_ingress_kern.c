@@ -252,7 +252,7 @@ void parse_ipv4(struct __sk_buff *skb, u64 l3_offset)
 
     u8 l4_offset = iph->ihl * 4; // ip header length
 
-    /* Check if its valid ip packet */
+    /* Check if it's a valid IPv4 packet */
     if (iph->ihl < 5 || ((unsigned char *)iph + l4_offset) > data_end)
         return;
  
