@@ -62,14 +62,29 @@ static const char *tc_root_egress_pass_map_file = "/sys/fs/bpf/tc/globals/tc_egr
  * (The tc "replace" command does not seem to work as expected)
  */
 
+// To escape any single quotes in the dev string.
+char* escape_quotes(const char* str) {
+    size_t len = strlen(str);
+    char* escaped = malloc(len * 2 + 1); // allocate enough space for worst-case scenario
+    size_t j = 0;
+    for (size_t i = 0; i < len; i++) {
+        if (str[i] == '\'') {
+            escaped[j++] = '\\'; // escape single quote
+        }
+        escaped[j++] = str[i];
+    }
+    escaped[j] = '\0';
+    return escaped;
+}
+
 static void tc_attach_bpf(const char *dev) {
     char cmd[CMD_MAX];
     int ret = 0;
 
     memset(&cmd, 0, CMD_MAX);
     snprintf(cmd, CMD_MAX,
-             "%s qdisc add dev %s clsact 2>/dev/null",
-             tc_cmd, dev);
+             "%s qdisc add dev '%s' clsact 2>/dev/null",
+             tc_cmd, escape_quotes(dev));
 
     if (verbose) printf(" - Run: %s\n", cmd);
     ret = system(cmd);
@@ -199,29 +214,6 @@ static int get_length(const char *str)
    return len;
 }
 
-static bool validate_ifname(const char *input_ifname, char *output_ifname) {
-    size_t len;
-    int i;
-
-    len = get_length(input_ifname);
-    if (len >= IF_NAMESIZE) {
-        return false;
-    }
-    // check if interface name is null
-    if (*input_ifname == '\0') {
-        return false;
-    }
-    for (i = 0; i < len; i++) {
-        char c = input_ifname[i];
-        // Check for each character of input_ifname  if it contains '/' or whitespace characters
-        if (c == '/' || isspace(c))
-            return false;
-    }
-    strncpy(output_ifname, input_ifname, len);
-    output_ifname[len] = '\0';
-    return true;
-}
-
 static const struct option long_options[] = {
         {"help",      no_argument,       NULL, 'h'},
         {"iface",     required_argument, NULL, 'i'},
@@ -271,10 +263,6 @@ int main(int argc, char **argv) {
                               long_options, &long_index)) != -1) {
         switch (opt) {
             case 'i':
-                if (!validate_ifname(optarg, (char *) &ifname)) {
-                    fprintf(stderr,
-                            "ERR: input --iface ifname invalid\n");
-                }
                 if (!(ifindex = if_nametoindex(ifname))) {
                     fprintf(stderr,
                             "ERR: --iface \"%s\" not real dev\n", ifname);
