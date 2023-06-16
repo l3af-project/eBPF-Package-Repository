@@ -180,8 +180,8 @@ static void parse_icmp_type(void *icmp_data,void *data_end, u16 *icmp_type){
 static void parse_port(void *trans_data, void *data_end, u8 proto,
                        u32 *dport, u32 *sport, u16 *control_bit)
 {
-    struct udphdr *udph;  // size = 8 bytes
-    struct tcphdr *tcph;  // size = 20-60 bytes
+    struct udphdr *udph;
+    struct tcphdr *tcph;
 
     u32 dstport = 0;
     u32 srcport = 0;
@@ -190,20 +190,17 @@ static void parse_port(void *trans_data, void *data_end, u8 proto,
     switch (proto) {
     case IPPROTO_UDP:
         udph = trans_data;
-
-        if (udph + 1 > data_end) 
+        if (udph + 1 > data_end) {
             return;
-        
+        }
         dstport = ntohs(udph->dest);
         srcport = ntohs(udph->source);
         break;
     case IPPROTO_TCP:
         tcph = trans_data;
-        u16 data_offset = tcph->doff * 4;
-
-        if (tcph->doff < 5 || ((unsigned char *)tcph + data_offset) > data_end)
+        if (tcph + 1 > data_end) {
             return;
-
+        }
         dstport = ntohs(tcph->dest);
         srcport = ntohs(tcph->source);
         if (tcph->syn & TCP_FLAGS) { controlbit = controlbit | TH_SYN; }
@@ -252,18 +249,20 @@ void parse_ipv4(struct __sk_buff *skb, u64 l3_offset)
     u16 control_bit = 0;
     u16 icmp_type = 0;
 
+<<<<<<< HEAD
     u8 l4_offset = iph->ihl * 4; // ip header length
 
     /* Check if it's a valid IPv4 packet */
     if (iph->ihl < 5 || ((unsigned char *)iph + l4_offset) > data_end)
+=======
+    if (iph + 1 > data_end)
+>>>>>>> parent of 093b005 (Fixing L4 offset for IP packets with Options field)
         return;
- 
-    void *thdr = ((unsigned char *)iph + l4_offset); // transport layer header pointer
-    
-    if(iph->protocol == ICMP)
-        parse_icmp_type(thdr, data_end, &icmp_type);
 
-    parse_port(thdr, data_end, iph->protocol,  &dport, &sport, &control_bit);
+    if(iph->protocol == ICMP)
+        parse_icmp_type(iph+1, data_end, &icmp_type);
+
+    parse_port(iph+1, data_end, iph->protocol,  &dport, &sport, &control_bit);
 
     memset(&flow_key, 0, sizeof(flow_key));
     flow_key.sa = iph->saddr;

@@ -97,22 +97,34 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
         return XDP_PASS;
     }
 
+<<<<<<< HEAD
     struct iphdr *iph = (struct iphdr *)(data + sizeof(struct ethhdr));
     __u8 l4_offset = iph->ihl * 4; // ipv4 header length
 
     /* Check if it is a valid IPV4 packet */
     if (iph->ihl < 5 || ((unsigned char *)iph + l4_offset) > data_end)
+=======
+    /* Ignore other than IP packets */
+    struct iphdr *iph = data + sizeof(struct ethhdr);
+    if (iph + 1 > data_end)
+>>>>>>> parent of 093b005 (Fixing L4 offset for IP packets with Options field)
         return XDP_PASS;
 
     /* Ignore other than TCP packets */
     if (iph->protocol != IPPROTO_TCP)
         return XDP_PASS;
 
+<<<<<<< HEAD
     struct tcphdr *tcph = (struct tcphdr *)((unsigned char *)iph + l4_offset);
     __u16 data_offset = tcph->doff * 4; // tcp header length
 
     /* Check if it's a valid TCP packet */
     if (tcph->doff < 5 || ((unsigned char *)tcph + data_offset) > data_end)
+=======
+    /* Check if its valid tcp packet */
+    struct tcphdr *tcph = (struct tcphdr *)(iph + 1);
+    if (tcph + 1 > data_end)
+>>>>>>> parent of 093b005 (Fixing L4 offset for IP packets with Options field)
         return XDP_PASS;
 
     /* Ignore other than TCP-SYN packets */

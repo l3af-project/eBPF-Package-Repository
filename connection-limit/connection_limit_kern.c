@@ -273,6 +273,7 @@ int _xdp_limit_conn(struct xdp_md *ctx)
     if (data + sizeof(struct ethhdr)+ 1 > data_end)
         return XDP_PASS;
 
+<<<<<<< HEAD
     struct ethhdr *eth = data;
     uint16_t eth_type = eth->h_proto;
 
@@ -286,17 +287,28 @@ int _xdp_limit_conn(struct xdp_md *ctx)
 
     /* Check if it is a valid IPV4 packet */
     if (iph->ihl < 5 || ((unsigned char *)iph + l4_offset) > data_end)
+=======
+    /* Check if its valid ip packet */
+    struct iphdr *iph = (struct iphdr *)(data + sizeof(struct ethhdr));
+    if (iph + 1 > data_end)
+>>>>>>> parent of 093b005 (Fixing L4 offset for IP packets with Options field)
         return XDP_PASS;
 
     /* Ignore other than TCP packets */
     if (iph->protocol != IPPROTO_TCP)
         return XDP_PASS;
 
+<<<<<<< HEAD
     struct tcphdr *tcph = (struct tcphdr *)((unsigned char *)iph + l4_offset);
     __u16 data_offset = tcph->doff * 4; // tcp header length
 
     /* Check if it is a valid TCP packet */
     if (tcph->doff < 5 || ((unsigned char *)tcph + data_offset) > data_end)
+=======
+    /* Check if its valid tcp packet */
+    struct tcphdr *tcph = (struct tcphdr *)(iph + 1);
+    if (tcph + 1 > data_end)
+>>>>>>> parent of 093b005 (Fixing L4 offset for IP packets with Options field)
         return XDP_PASS;
 
     /* Ignore other than TCP-SYN packets */
