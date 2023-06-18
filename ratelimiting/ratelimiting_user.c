@@ -192,6 +192,33 @@ static __u64 time_get_ns(void)
 #endif
 }
 
+/* Delete stale map entries(LRU) based on the timestamp at which
+ * a map element is created. */
+static void delete_stale_entries(void)
+{
+    log_debug("Deleting stale map entries periodically");
+
+    if (map_fd[1] < 0) {
+        log_info("Window map fd not found");
+        exit(EXIT_FAILURE);
+    }
+
+    __u64 first_key = 0, next_key = 0;
+    __u64 curr_time = time_get_ns();
+    log_debug("Current time is %llu", curr_time);
+
+    while (!bpf_map_get_next_key(map_fd[1], &first_key, &next_key))
+    {
+        if (next_key < (curr_time - buffer_time)) {
+            log_debug("Deleting stale map entry %llu", next_key);
+            if (bpf_map_delete_elem(map_fd[1], &next_key) != 0) {
+                log_info("Map element not found");
+            }
+        }
+        first_key = next_key;
+    }
+}
+
 static char* trim_space(char *str) {
     char *end;
     /* skip leading whitespace */
@@ -372,14 +399,19 @@ int main(int argc, char **argv)
         update_ports(ports);
     }
 
-    fflush(info);
     /* Handle signals and exit clean */
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 #ifdef __linux__
     signal(SIGHUP, signal_handler);
-    pause();
-#elif WIN32
-    Sleep(INFINITE);
 #endif
+
+    while(1)
+    {
+        sleep(60);
+        /* Keep deleting the stale map entries periodically *
+         * TODO Check if LRU maps can be used.              */
+        delete_stale_entries();
+        fflush(info);
+    }
 }

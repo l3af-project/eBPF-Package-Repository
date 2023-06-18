@@ -36,10 +36,10 @@ struct bpf_map_def SEC("maps") rl_config_map = {
 /* Maintains the timestamp of a window and the total number of
  * connections received in that window(window = 1 sec interval) */
 struct bpf_map_def SEC("maps") rl_window_map = {
-	.type		= BPF_MAP_TYPE_LRU_HASH,
+	.type		= BPF_MAP_TYPE_HASH,
 	.key_size	= sizeof(uint64_t),
 	.value_size	= sizeof(uint64_t),
-	.max_entries	= 1000,
+	.max_entries	= 100,
 };
 
 /* Maintains the total number of connections received(TCP-SYNs)
@@ -85,46 +85,34 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     void *data_end = (void *)(long)ctx->data_end;
     void *data = (void *)(long)ctx->data;
 
-    /* Check if it is a valid ethernet packet */
-    if (data + sizeof(struct ethhdr) + 1 > data_end)
-        return XDP_PASS;
-
     struct ethhdr *eth = data;
-    uint16_t eth_type = eth->h_proto;
 
-    /* Ignore other than IPV4 packets */
+    /* Check if it is a valid ethernet packet */
+    if (data + sizeof(*eth) > data_end)
+        return XDP_DROP;
+
+    /* Ignore other than ethernet packets */
+    uint16_t eth_type = eth->h_proto;
     if (ntohs(eth_type) != ETH_P_IP) {
         return XDP_PASS;
     }
 
-<<<<<<< HEAD
     struct iphdr *iph = (struct iphdr *)(data + sizeof(struct ethhdr));
-    __u8 l4_offset = iph->ihl * 4; // ipv4 header length
+    __u8 l4_offset = iph->ihl * 4; // ip header length
 
-    /* Check if it is a valid IPV4 packet */
-    if (iph->ihl < 5 || ((unsigned char *)iph + l4_offset) > data_end)
-=======
     /* Ignore other than IP packets */
-    struct iphdr *iph = data + sizeof(struct ethhdr);
-    if (iph + 1 > data_end)
->>>>>>> parent of 093b005 (Fixing L4 offset for IP packets with Options field)
+    if (iph->ihl < 5 || ((unsigned char *)iph + l4_offset) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP packets */
     if (iph->protocol != IPPROTO_TCP)
         return XDP_PASS;
 
-<<<<<<< HEAD
     struct tcphdr *tcph = (struct tcphdr *)((unsigned char *)iph + l4_offset);
     __u16 data_offset = tcph->doff * 4; // tcp header length
 
-    /* Check if it's a valid TCP packet */
-    if (tcph->doff < 5 || ((unsigned char *)tcph + data_offset) > data_end)
-=======
     /* Check if its valid tcp packet */
-    struct tcphdr *tcph = (struct tcphdr *)(iph + 1);
-    if (tcph + 1 > data_end)
->>>>>>> parent of 093b005 (Fixing L4 offset for IP packets with Options field)
+    if (tcph->doff < 5 || ((unsigned char *)tcph + data_offset) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP-SYN packets */
