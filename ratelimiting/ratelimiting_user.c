@@ -399,6 +399,7 @@ int main(int argc, char **argv)
         update_ports(ports);
     }
 
+    fflush(info);
     /* Handle signals and exit clean */
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
