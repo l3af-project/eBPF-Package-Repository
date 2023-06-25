@@ -16,6 +16,8 @@ static const char *__doc__ =
 #include <net/if.h>
 #include <signal.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <time.h>
 
 #include "bpf_util.h"
@@ -49,7 +51,7 @@ static const char *tc_root_ingress_map_file = "/sys/fs/bpf/tc/globals/tc_ingress
 static const char *tc_root_egress_map_file = "/sys/fs/bpf/tc/globals/tc_egress_root_array";
 static const char *tc_root_ingress_pass_map_file = "/sys/fs/bpf/tc/globals/tc_ingress_root_pass_array";
 static const char *tc_root_egress_pass_map_file = "/sys/fs/bpf/tc/globals/tc_egress_root_pass_array";
-
+int exec_cmd(char *cmd[]);
 /*
  * TC require attaching the bpf-object via the TC cmdline tool.
  *
@@ -78,7 +80,7 @@ char* escape_quotes(const char* str) {
 }
 
 static void tc_attach_bpf(const char *dev) {
-    char cmd[CMD_MAX];
+    char *cmd[] = {tc_cmd, "qdisc", "add", "dev", dev, "clsact", (char *)0};
     int ret = 0;
 
     memset(&cmd, 0, CMD_MAX);
@@ -91,30 +93,24 @@ static void tc_attach_bpf(const char *dev) {
 
     if (ret && verbose) {
         fprintf(stderr,
-                "ERR(%d): tc cannot attach qdisc hook\n Cmdline:%s\n",
-                WEXITSTATUS(ret), cmd);
+                "ERR(%d): tc cannot attach qdisc hook\n",
+                WEXITSTATUS(ret));
     }
 
     return;
 }
 
 static int tc_add_filter(const char *dev, const char *flow_dir, const char *bpf_obj, const char *sec) {
-    char cmd[CMD_MAX];
+    char *cmd[] = {tc_cmd,"filter", "add", "dev", (void *)dev, (void *)flow_dir, "prio","1",
+                   "handle","1","bpf", "da","obj", (void *)bpf_obj,"sec",(void *)sec, (char *)0};
     int ret = 0;
 
-    memset(&cmd, 0, CMD_MAX);
-    snprintf(cmd, CMD_MAX,
-             "%s filter add dev %s "
-             "%s prio 1 handle 1 bpf da obj %s sec %s",
-             tc_cmd, dev, flow_dir, bpf_obj, sec);
-
-    if (verbose) printf(" - Run: %s\n", cmd);
-    ret = system(cmd);
+    ret = exec_cmd(cmd);
 
     if (ret) {
         fprintf(stderr,
-                "ERR(%d): tc cannot attach filter\n Cmdline:%s\n",
-                WEXITSTATUS(ret), cmd);
+                "ERR(%d): tc cannot attach filter\n",
+                WEXITSTATUS(ret));
     }
 
     return ret;
@@ -122,55 +118,36 @@ static int tc_add_filter(const char *dev, const char *flow_dir, const char *bpf_
 
 // This method is to link the current program fd with previous program map.
 static int  tc_chain_bpf(const char *map_name, const char *bpf_obj, const char *sec) {
-    char cmd[CMD_MAX];
+    char *cmd[] = {tc_cmd, "exec", "bpf", "graft", (void *)map_name, "key", "0", "obj", (void *)bpf_obj, "sec", (void *)sec,(char *)0};
     int ret = 0;
 
-    memset(&cmd, 0, CMD_MAX);
-    snprintf(cmd, CMD_MAX,
-             "%s exec bpf graft %s key 0 obj %s sec %s",
-             tc_cmd, map_name, bpf_obj, sec);
-
-    if (verbose) printf(" - Run: %s\n", cmd);
-    ret = system(cmd);
-
+    ret = exec_cmd(cmd) ;
     if (ret) {
-        fprintf(stderr, "tc chain bpf program Cmdline:%s",cmd);
+        fprintf(stderr, "tc chain bpf program failed");
     }
 
     return ret;
 }
 
 static int tc_list_filter(const char *dev, const char *flow_dir) {
-    char cmd[CMD_MAX];
+    char *cmd[] = {tc_cmd, "filter", "show", "dev", (void *)dev, (void *)flow_dir, (char *)0};
     int ret = 0;
 
-    memset(&cmd, 0, CMD_MAX);
-    snprintf(cmd, CMD_MAX,
-             "%s filter show dev %s %s",
-             tc_cmd, dev, flow_dir);
-
-    if (verbose) printf(" - Run: %s\n", cmd);
-    ret = system(cmd);
+    ret = exec_cmd(cmd);
     if (ret) {
-        fprintf(stderr, "ERR(%d): tc cannot list filters\n Cmdline:%s\n", ret, cmd);
+        fprintf(stderr, "ERR(%d): tc cannot list filters\n", ret);
         exit(EXIT_FAILURE);
     }
     return ret;
 }
 
 static int tc_remove_filter(const char *dev, const char *flow_dir, const char *map_file) {
-    char cmd[CMD_MAX];
+    char *cmd[] = {tc_cmd, "filter", "delete", "dev", (void *)dev, (void *)flow_dir, (char *)0};
     int ret = 0;
 
-    memset(&cmd, 0, CMD_MAX);
-    snprintf(cmd, CMD_MAX,
-             "%s filter delete dev %s %s",
-             tc_cmd, dev, flow_dir);
-
-    if (verbose) printf(" - Run: %s\n", cmd);
-    ret = system(cmd);
+    ret = exec_cmd(cmd);
     if (ret) {
-        fprintf(stderr, "ERR(%d): tc cannot remove filters\n Cmdline:%s\n", ret, cmd);
+        fprintf(stderr, "ERR(%d): tc cannot remove filters\n", ret);
         exit(EXIT_FAILURE);
     }
 
@@ -240,6 +217,29 @@ static void usage(char *argv[]) {
     }
     printf("\n");
 }
+
+
+int exec_cmd(char *cmd[])
+{
+    int pid, status, ret = 0;
+    if (verbose) verbose_output(cmd);
+
+    pid = fork();
+    if (pid > 0) {
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status)) {
+            fprintf(stderr, "Child process exited with status %d", status);
+        }
+    } else if (pid == 0) {
+        ret = execvp(cmd[0], cmd);
+        if (ret < 0) {
+            perror("Command execution failed");
+            return ret;
+        }
+    }
+    return ret;
+}
+
 
 int main(int argc, char **argv) {
     char ingress_filename[256];
