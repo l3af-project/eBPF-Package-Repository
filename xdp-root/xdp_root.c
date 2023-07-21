@@ -152,18 +152,15 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
         if (!prog_fd[0]) {
-            printf("load_bpf_file: %s\n", strerror(errno));
             return EXIT_FAILURE;
         }
 
         if (bpf_xdp_attach(ifindex_in, prog_fd[0], xdp_flags, &opts) < 0) {
-            printf("bpf_xdp_attach failed\n");
             fprintf(stderr, "ERROR: link set xdp fd failed on %d\n", ifindex_in);
             return EXIT_FAILURE;
         }
 
         fd = bpf_obj_get(prog_root_pass_file);
-        printf("bpf_obj_get(prog_root_pass_file) %s returned %d\n",prog_root_pass_file,fd);
 
         if (fd < 0) {
             fprintf(stderr, "Didn't get the pinned file, creating one\n");
@@ -186,7 +183,6 @@ int main(int argc, char **argv)
          * so it can chain the current one */
         __u64 pkey = 0;
         if (bpf_map_update_elem(map_fd[0], &pkey, &(prog_fd[1]), 0) < 0) {
-            printf("Failed to update bpf_map_update_elem\n");
             fprintf(stderr, "Failed to update root pass through fd in the chain\n");
             exit(EXIT_FAILURE);
         }

@@ -41,35 +41,25 @@ load_xdp_root_bpf_file(const char* filename)
 {
     struct bpf_object_open_opts opts = { 0 };
     struct bpf_object* object = bpf_object__open_file(filename, &opts);
-    printf("Opened file %s\n",filename);
     if (object == NULL) {
-        printf("Object is NULL");
         return -1;
     }
     bpf_object__load(object);
     struct bpf_program* program = bpf_object__next_program(object, NULL);
 
     if (bpf_program__pin(program, program_path) < 0) {
-        printf("Failed to pin eBPF program\n");
         fprintf(stderr, "Failed to pin eBPF program: %d\n", errno);
         return 1;
     }
 
-    printf("Program name %s\n", bpf_program__name(program));
-    printf("Program fd 0 %d\n", bpf_program__fd(program));
     prog_fd[0] = bpf_program__fd(program);
     struct bpf_map* map = bpf_object__next_map(object, NULL);
     map_fd[0] = bpf_map__fd(map);
-    printf("Map fd 0 %d\n", map_fd[0]); 
-    printf("Running bpf_object__next_program\n");        
     program = bpf_object__next_program(object, program);
-    printf("Program name %s\n", bpf_program__name(program));
     prog_fd[1] = bpf_program__fd(program);
-    printf("Program fd 1 %d\n", prog_fd[1]);
     
     map = bpf_object__next_map(object, map);
     map_fd[1] = bpf_map__fd(map);
-    printf("Map fd 1 %d\n", map_fd[1]);    
     
     //bpf_object__close(object);
 
