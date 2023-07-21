@@ -87,38 +87,46 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     struct ethhdr *eth = data;
 
+    bpf_printk("Check if it is a valid ethernet packet");
     /* Check if it is a valid ethernet packet */
     if (data + sizeof(*eth) > data_end)
         return XDP_DROP;
 
+    bpf_printk("Ignore other than ethernet packets");
     /* Ignore other than ethernet packets */
     uint16_t eth_type = eth->h_proto;
     if (ntohs(eth_type) != ETH_P_IP) {
         return XDP_PASS;
     }
 
+    bpf_printk("Ignore other than IP packets");
     /* Ignore other than IP packets */
     struct iphdr *iph = data + sizeof(struct ethhdr);
     if (iph + 1 > data_end)
         return XDP_PASS;
 
+    bpf_printk("Ignore other than TCP packets");
     /* Ignore other than TCP packets */
     if (iph->protocol != IPPROTO_TCP)
         return XDP_PASS;
 
+    bpf_printk("Check if its valid tcp packet");
     /* Check if its valid tcp packet */
     struct tcphdr *tcph = (struct tcphdr *)(iph + 1);
     if (tcph + 1 > data_end)
         return XDP_PASS;
 
+    bpf_printk("Ignore other than TCP-SYN packets");
     /* Ignore other than TCP-SYN packets */
-    if (!(tcph->syn & TCP_FLAGS))
-        return XDP_PASS;
+    /*if (!(tcph->syn & TCP_FLAGS))
+        return XDP_PASS;*/
 
+    bpf_printk("Ignore TCP-SYN-ACK packets");
     /* Ignore TCP-SYN-ACK packets */
-    if (tcph->ack & TCP_FLAGS)
-        return XDP_PASS;
+    /*if (tcph->ack & TCP_FLAGS)
+        return XDP_PASS;*/
 
+    bpf_printk("lookup dstport");
     uint16_t dstport = bpf_ntohs(tcph->dest);
     if(!bpf_map_lookup_elem(&rl_ports_map, &dstport))
         return XDP_PASS;
@@ -126,8 +134,11 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     uint64_t rkey = 0;
     uint64_t *rate = bpf_map_lookup_elem(&rl_config_map, &rkey);
 
+    bpf_printk("lookup rate");
     if (!rate)
         return XDP_PASS;
+
+    bpf_printk("Before bpf_ktime_get_ns");
 
     /* Current time in monotonic clock */
     uint64_t tnow = bpf_ktime_get_ns();
@@ -150,6 +161,8 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     /* Previous window is one second before the current window */
     uint64_t pw_key = cw_key - NANO;
 
+    bpf_printk("Before rl_window_map");
+
     /* Number of incoming connections in the previous window(second) */
     uint64_t *pw_count = bpf_map_lookup_elem(&rl_window_map, &pw_key);
 
@@ -162,10 +175,14 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     /* Total number of dropped connections so far */
     uint64_t *drop_count = bpf_map_lookup_elem(&rl_drop_count_map, &rkey);
 
+    bpf_printk("Before !in_count || !drop_count");
+
     /* Just make the verifier happy, it would never be the case in real as
      * these two counters are initialised in the user space. */
     if(!in_count || !drop_count)
         return XDP_PASS;
+
+    bpf_printk("After !in_count || !drop_count");
 
     /* Increment the total number of incoming connections counter */
 
@@ -173,6 +190,7 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     if (!cw_count)
     {
+        bpf_printk("initialize the current window counter");
         /* This is the first connection in the current window,
          * initialize the current window counter. */
         uint64_t init_count = 0;
@@ -184,11 +202,13 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     }
     if (!pw_count)
     {
+        bpf_printk("!pw_count");
         /* This is the fresh start of system or there have been no
          * connections in the last second, so make the decision purely based
          * on the incoming connections in the current window. */
         if (*cw_count >= *rate)
         {
+            bpf_printk("Dropping packet - *cw_count >= *rate");
             /* Connection count in the current window already exceeded the
              * rate limit so drop this connection. */
             (*drop_count)++;
@@ -211,6 +231,7 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     if (total_count > ((*rate) * MULTIPLIER))
     {
+        bpf_printk("Dropping packet - total_count > ((*rate) * MULTIPLIER");
         /* Connection count from tnow to (tnow-1) exceeded the rate limit,
          * so drop this connection. */
         (*drop_count)++;
@@ -224,6 +245,8 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 SEC("xdp_ratelimiting")
 int _xdp_ratelimiting(struct xdp_md *ctx)
 {
+   bpf_printk("xdp_ratelimiting section");
+
    int rc = _xdp_ratelimit(ctx);
 
    if (rc == XDP_DROP) {

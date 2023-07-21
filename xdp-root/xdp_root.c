@@ -37,8 +37,8 @@ static int ifindex_in;
 
 static __u32 xdp_flags;
 
-static const char *prog_root_pass_file = "/sys/fs/bpf/xdp_root_pass_array";
-static const char *prog_root_file = "/sys/fs/bpf/xdp_root_array";
+static const char *prog_root_pass_file = "C:\\leaf\\sys\\fs\\bpf\\xdp_root_pass_array";
+static const char *prog_root_file = "C:\\leaf\\sys\\fs\\bpf\\xdp_root_array";
 
 static const struct option long_options[] = {
         {"help",        no_argument,            NULL, 'h' },
@@ -48,10 +48,12 @@ static const struct option long_options[] = {
         {0, 0, NULL,  0 }
 };
 
+static struct bpf_xdp_attach_opts opts = { 0 };
+
 static void stop()
 {
-    bpf_set_link_xdp_fd(ifindex_in, -1, xdp_flags);
-
+    //bpf_set_link_xdp_fd(ifindex_in, -1, xdp_flags);
+    bpf_xdp_attach(ifindex_in, -1, xdp_flags, NULL);
     // remove map file
     remove(prog_root_pass_file);
     remove(prog_root_file);
@@ -75,6 +77,23 @@ static void usage(char *argv[])
         printf("\n");
     }
     printf("\n");
+}
+
+static int if_stringtoindex(char* name)
+{
+    int ifindex = atoi(name);
+    if (!ifindex) {
+        WCHAR if_alias[80];
+        if (MultiByteToWideChar(CP_ACP, 0, name, -1, if_alias, sizeof(if_alias) / sizeof(*if_alias)) > 0) {
+            NET_LUID if_luid;
+            if (ConvertInterfaceAliasToLuid(if_alias, &if_luid) == ERROR_SUCCESS) {
+                ConvertInterfaceLuidToIndex(&if_luid, (NET_IFINDEX*)&ifindex);
+            }
+        }
+    }
+    if (!ifindex)
+        ifindex = if_nametoindex(name);
+    return ifindex;
 }
 
 int main(int argc, char **argv)
@@ -115,7 +134,7 @@ int main(int argc, char **argv)
 	    return EXIT_FAILURE;
     }
 
-    ifindex_in = if_nametoindex(iface);
+    ifindex_in = if_stringtoindex(iface);
 #ifdef _WIN32
     _splitpath_s(argv[0], NULL, 0, NULL, 0, filename, sizeof(filename), NULL, 0);
     strcat_s(filename, sizeof(filename), "_kern.o");
@@ -128,7 +147,7 @@ int main(int argc, char **argv)
 #endif
 
     if (strcmp(cmd,"start") == 0) {
-        if (load_bpf_file(filename)) {
+        if (load_xdp_root_bpf_file(filename)) {
             fprintf(stderr, "%s", bpf_log_buf);
             return EXIT_FAILURE;
         }
@@ -136,20 +155,24 @@ int main(int argc, char **argv)
             printf("load_bpf_file: %s\n", strerror(errno));
             return EXIT_FAILURE;
         }
-        if (bpf_set_link_xdp_fd(ifindex_in, prog_fd[0], xdp_flags) < 0) {
+
+        if (bpf_xdp_attach(ifindex_in, prog_fd[0], xdp_flags, &opts) < 0) {
+            printf("bpf_xdp_attach failed\n");
             fprintf(stderr, "ERROR: link set xdp fd failed on %d\n", ifindex_in);
             return EXIT_FAILURE;
         }
 
         fd = bpf_obj_get(prog_root_pass_file);
+        printf("bpf_obj_get(prog_root_pass_file) %s returned %d\n",prog_root_pass_file,fd);
+
         if (fd < 0) {
             fprintf(stderr, "Didn't get the pinned file, creating one\n");
-            if (bpf_obj_pin(map_fd[0], prog_root_pass_file)) {
+            if (bpf_obj_pin(map_fd[0], prog_root_pass_file) < 0) {
                 fprintf(stderr,"bpf_obj_pin - failed on map %s\n", prog_root_pass_file);
-                    if (bpf_set_link_xdp_fd(ifindex_in, -1, xdp_flags) < 0) {
-                        fprintf(stderr, "ERROR: unlink xdp fd failed on %d\n", ifindex_in);
-                    }
-                    return EXIT_FAILURE;
+                if (bpf_xdp_attach(ifindex_in, -1, xdp_flags, NULL) < 0) {
+                    fprintf(stderr, "ERROR: unlink xdp fd failed on %d\n", ifindex_in);
+                }
+                return EXIT_FAILURE;
             }
         }
 
@@ -161,8 +184,9 @@ int main(int argc, char **argv)
 
         /* Update pass through prog fd in the root prog map fd,
          * so it can chain the current one */
-         __u64 pkey = 0;
-        if (bpf_map_update_elem(map_fd[0], &pkey, &(prog_fd[1]), 0)) {
+        __u64 pkey = 0;
+        if (bpf_map_update_elem(map_fd[0], &pkey, &(prog_fd[1]), 0) < 0) {
+            printf("Failed to update bpf_map_update_elem\n");
             fprintf(stderr, "Failed to update root pass through fd in the chain\n");
             exit(EXIT_FAILURE);
         }
@@ -170,9 +194,9 @@ int main(int argc, char **argv)
         fd = bpf_obj_get(prog_root_file);
         if (fd < 0) {
             fprintf(stderr, "Didn't get the pinned file, creating one\n");
-            if (bpf_obj_pin(map_fd[1], prog_root_file)) {
+            if (bpf_obj_pin(map_fd[1], prog_root_file) < 0) {
                 fprintf(stderr,"bpf_obj_pin - failed on map %s\n", prog_root_file);
-                if (bpf_set_link_xdp_fd(ifindex_in, -1, xdp_flags) < 0) {
+                if (bpf_xdp_attach(ifindex_in, -1, xdp_flags, NULL) < 0) {
                     fprintf(stderr, "ERROR: unlink xdp fd failed on %d\n", ifindex_in);
                 }
                 // remove root pass map file

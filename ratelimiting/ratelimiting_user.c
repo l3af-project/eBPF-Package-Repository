@@ -21,7 +21,7 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include "bpf_load.h"
+//#include "bpf_load.h"
 #ifdef __linux__
 #include "bpf_util.h"
 #endif
@@ -62,6 +62,9 @@ static const char *__doc__ =
         "Ratelimit incoming TCP connections using XDP";
 
 static int ifindex;
+static int prog_fd[2];
+static int map_fd[6];
+static char* bpf_log_buf;
 
 FILE *info;
 static char prev_prog_map[1024];
@@ -69,10 +72,10 @@ static const struct option long_options[] = {
     {"help",      no_argument,        NULL, 'h' },
     {"iface",     required_argument,  NULL, 'i' },
     {"rate",      required_argument,  NULL, 'r' },
-    {"ports",     optional_argument,  NULL, 'p' },
+    {"ports",     required_argument,  NULL, 'p' },
     {"verbose",   optional_argument,  NULL, 'v' },
-    {"direction", optional_argument,  NULL, 'd'},
-    {"map-name",  optional_argument,  NULL, 'm' },
+    {"direction", required_argument,  NULL, 'd'},
+    {"map-name",  required_argument,  NULL, 'm' },
     {0,           0,                  NULL,  0  }
 };
 
@@ -227,18 +230,75 @@ static void update_ports(char *ports)
     uint16_t port = 0;
     uint8_t pval = 1;
     tmp = strdup(ports);
-    while((ptr = strsep(&tmp, delim)) != NULL)
+    ptr = strtok(tmp, delim);
+
+    while (ptr != NULL) {
+        ptr = trim_space(ptr);
+        port = (uint16_t)(strtoi(ptr));
+        printf("Adding port %d to map \n",port);
+        bpf_map_update_elem(map_fd[4], &port, &pval, 0);
+        ptr = strtok(NULL, delim);
+    }
+
+    /*while((ptr = strsep(&tmp, delim)) != NULL)
     {
         ptr = trim_space(ptr);
         port = (uint16_t)(strtoi(ptr));
         bpf_map_update_elem(map_fd[4], &port, &pval, 0);
-    }
+    }*/
+
     free(tmp);
+}
+
+static int // 0 on success and sets prog_fd and map_fd, non-zero on failure and sets bpf_log_buf.
+load_ratelimiting_bpf_file(const char* filename)
+{
+    struct bpf_object_open_opts opts = { 0 };
+    printf("Before Opening file %s\n",filename);
+    struct bpf_object* object = bpf_object__open_file(filename, &opts);
+    printf("After Opening file %s\n",filename);
+    if (object == NULL) {
+        printf("Object is NULL");
+        return -1;
+    }
+    bpf_object__load(object);
+    struct bpf_program* program = bpf_object__next_program(object, NULL);
+    printf("Program name %s\n", bpf_program__name(program));
+    printf("Program fd 0 %d\n", bpf_program__fd(program));
+    prog_fd[0] = bpf_program__fd(program);
+    struct bpf_map* map = bpf_object__next_map(object, NULL);
+    map_fd[0] = bpf_map__fd(map);
+    printf("Map fd 0 %d\n", map_fd[0]);
+
+    map = bpf_object__next_map(object, map);
+    map_fd[1] = bpf_map__fd(map);
+    printf("Map fd 1 %d\n", map_fd[1]);
+
+    map = bpf_object__next_map(object, map);
+    map_fd[2] = bpf_map__fd(map);
+    printf("Map fd 2 %d\n", map_fd[2]);
+
+    map = bpf_object__next_map(object, map);
+    map_fd[3] = bpf_map__fd(map);
+    printf("Map fd 3 %d\n", map_fd[3]);
+
+    map = bpf_object__next_map(object, map);
+    map_fd[4] = bpf_map__fd(map);
+    printf("Map fd 4 %d\n", map_fd[4]);
+
+    map = bpf_object__next_map(object, map);
+    map_fd[5] = bpf_map__fd(map);
+    printf("Map fd 5 %d\n", map_fd[5]);
+    
+    //bpf_object__close(object);
+
+    return 0;
 }
 
 int main(int argc, char **argv)
 {
-    int longindex = 0, rate = 0, opt;
+    int longindex = 0, opt;
+    uint64_t rate = 0;
     int ret = EXIT_SUCCESS;
     char bpf_obj_file[256];
     char ports[2048];
@@ -247,7 +307,9 @@ int main(int argc, char **argv)
     struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
 #endif
     int len = 0;
-    snprintf(bpf_obj_file, sizeof(bpf_obj_file), "%s_kern.o", argv[0]);
+    //snprintf(bpf_obj_file, sizeof(bpf_obj_file), "%s_kern.o", argv[0]);
+    _splitpath_s(argv[0], NULL, 0, NULL, 0, bpf_obj_file, sizeof(bpf_obj_file), NULL, 0);
+    strcat_s(bpf_obj_file, sizeof(bpf_obj_file), "_kern.o");
 
     memset(&ports, 0, 2048);
 
@@ -256,24 +318,29 @@ int main(int argc, char **argv)
     {
         switch (opt) {
             case 'r':
+                printf("rate : %s\n",optarg);
                 rate = strtoi(optarg);
                 break;
             case 'i':
+                printf("iface : %s\n",optarg);
                 ifindex = if_nametoindex(optarg);
                 break;
             case 'v':
+                printf("verbose : %s\n",optarg);
                 if(optarg) {
                     verbosity = strtoi(optarg);
                 }
                 break;
             case 'm':
+                printf("map-name : %s\n",optarg);
                 if(optarg) {
-                    len = get_length(optarg);
-                    strncpy(prev_prog_map, optarg, len);
+                    len = get_length("C:\\leaf\\sys\\fs\\bpf\\xdp_root_pass_array");
+                    strncpy(prev_prog_map, "C:\\leaf\\sys\\fs\\bpf\\xdp_root_pass_array", len);
                     prev_prog_map[len] = '\0';
                 }
                 break;
             case 'p':
+                printf("ports : %s\n",optarg);
                 if(optarg) {
                     len = get_length(optarg);
                     strncpy(ports, optarg, len);
@@ -296,11 +363,15 @@ int main(int argc, char **argv)
     }
 #endif
     set_logfile();
-
-    __u64 ckey = 0, rkey = 0, dkey = 0, pkey = 0;
+    uint32_t ckey = 0;
+    __u64 rkey = 0, dkey = 0, pkey = 0;
     __u64 recv_count = 0, drop_count = 0;
 
-    if (load_bpf_file(bpf_obj_file)) {
+    uint16_t map_count = 0;
+    ebpf_map_info_t* map_info = NULL;
+
+    printf("loading file %s \n",bpf_obj_file);
+    if (load_ratelimiting_bpf_file(bpf_obj_file)) {
         log_err("Failed to load bpf program");
         return 1;
     }
@@ -309,8 +380,33 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    unsigned int id = 0;
+    int prev_prog_map_fd, nb_fds = 0;
+    int err;
+    
+    while(id >= 0)
+    {
+        err = bpf_map_get_next_id(id, &id);
+        printf("Inside ebpf_api_get_pinned_map_info... id : %d\n",id);
+        prev_prog_map_fd = bpf_map_get_fd_by_id(id);
+        printf("Inside ebpf_api_get_pinned_map_info... fd : %d\n",prev_prog_map_fd);
+        struct bpf_prog_info info = {0};
+        uint32_t info_size = (uint32_t)sizeof(info);
+        if (bpf_obj_get_info_by_fd(prev_prog_map_fd, &info, &info_size) == 0) {
+            printf("%7u  bpf_obj_get_info_by_fd  %s\n", info.id, info.name);
+            char *mapstr;
+            mapstr = strstr(prev_prog_map, info.name);
+            if (mapstr) {
+                printf("Matched pin path breaking the loop : %s\n",prev_prog_map);
+                break;
+            }
+        }
+    }
+
     /* Get the previous program's map fd in the chain */
-    int prev_prog_map_fd = bpf_obj_get(prev_prog_map);
+    //int prev_prog_map_fd = bpf_obj_get(prev_prog_map);
+    printf("prev_prog_map : %s\n",prev_prog_map);
+    printf("\nprev_prog_map_fd is %d \n", prev_prog_map_fd);
     if (prev_prog_map_fd < 0) {
         log_err("Failed to fetch previous xdp function in the chain");
         exit(EXIT_FAILURE);
@@ -325,9 +421,11 @@ int main(int argc, char **argv)
      close(prev_prog_map_fd);
 
     int next_prog_map_fd = bpf_obj_get(xdp_rl_ingress_next_prog);
+    printf("\nnext_prog_map_fd is %d\n FD : %d\n", next_prog_map_fd,map_fd[5]);
+
     if (next_prog_map_fd < 0) {
         log_info("Failed to fetch next prog map fd, creating one");
-        if (bpf_obj_pin(map_fd[5], xdp_rl_ingress_next_prog)) {
+        if (bpf_obj_pin(map_fd[5], xdp_rl_ingress_next_prog) < 0) {
             log_info("Failed to pin next prog fd map");
             exit(EXIT_FAILURE);
         }
@@ -349,16 +447,19 @@ int main(int argc, char **argv)
     }
 
     if (!map_fd[2]) {
+        printf("Failed to fetch receive count map");
         log_err("Failed to fetch receive count map");
         return -1;
     }
     ret = bpf_map_update_elem(map_fd[2], &rkey, &recv_count, 0);
     if (ret) {
+        printf("Failed to update receive count map");
         perror("Failed to update receive count map");
         return 1;
     }
 
     if (!map_fd[3]) {
+        printf("Failed to fetch drop count map");
         log_err("Failed to fetch drop count map");
         return -1;
     }
@@ -367,12 +468,16 @@ int main(int argc, char **argv)
             perror("Failed to update drop count map");
             return 1;
     }
+
+    printf("Configuring ports\n");
     if (get_length(ports)) {
         log_info("Configured port list is %s\n", ports);
         update_ports(ports);
     }
+    printf("****Configured ports are %s\n", ports);
+    
+    fflush(info); 
 
-    fflush(info);
     /* Handle signals and exit clean */
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
