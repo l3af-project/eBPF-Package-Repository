@@ -37,8 +37,8 @@ static int ifindex_in;
 
 static __u32 xdp_flags;
 
-static const char *prog_root_pass_file = "C:\\leaf\\sys\\fs\\bpf\\xdp_root_pass_array";
-static const char *prog_root_file = "C:\\leaf\\sys\\fs\\bpf\\xdp_root_array";
+static const char *prog_root_pass_file = "/sys/fs/bpf/xdp_root_pass_array";
+static const char *prog_root_file = "/sys/fs/bpf/xdp_root_array";
 
 static const struct option long_options[] = {
         {"help",        no_argument,            NULL, 'h' },
@@ -79,23 +79,6 @@ static void usage(char *argv[])
     printf("\n");
 }
 
-static int if_stringtoindex(char* name)
-{
-    int ifindex = atoi(name);
-    if (!ifindex) {
-        WCHAR if_alias[80];
-        if (MultiByteToWideChar(CP_ACP, 0, name, -1, if_alias, sizeof(if_alias) / sizeof(*if_alias)) > 0) {
-            NET_LUID if_luid;
-            if (ConvertInterfaceAliasToLuid(if_alias, &if_luid) == ERROR_SUCCESS) {
-                ConvertInterfaceLuidToIndex(&if_luid, (NET_IFINDEX*)&ifindex);
-            }
-        }
-    }
-    if (!ifindex)
-        ifindex = if_nametoindex(name);
-    return ifindex;
-}
-
 int main(int argc, char **argv)
 {
     char filename[256];
@@ -134,7 +117,7 @@ int main(int argc, char **argv)
 	    return EXIT_FAILURE;
     }
 
-    ifindex_in = if_stringtoindex(iface);
+    ifindex_in = if_nametoindex(iface);
 #ifdef _WIN32
     _splitpath_s(argv[0], NULL, 0, NULL, 0, filename, sizeof(filename), NULL, 0);
     strcat_s(filename, sizeof(filename), "_kern.o");

@@ -116,8 +116,8 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
         return XDP_PASS;*/
 
     /* Ignore TCP-SYN-ACK packets */
-    /*if (tcph->ack & TCP_FLAGS)
-        return XDP_PASS;*/
+    if (tcph->ack & TCP_FLAGS)
+        return XDP_PASS;
 
     uint16_t dstport = bpf_ntohs(tcph->dest);
     if(!bpf_map_lookup_elem(&rl_ports_map, &dstport))

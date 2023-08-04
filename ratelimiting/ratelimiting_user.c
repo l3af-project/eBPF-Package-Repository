@@ -34,7 +34,12 @@ char* strsep(char** stringp, const char* delim)
 {
     static char* next_token = NULL;
     char* input = *stringp;
-    *stringp = strtok_s(input, delim, &next_token);
+
+    if (strtok_s(input, delim, &next_token) == NULL) {
+        return NULL;
+    }
+
+    *stringp = next_token;
     return input;
 }
 #define close _close
@@ -230,30 +235,19 @@ static void update_ports(char *ports)
     uint16_t port = 0;
     uint8_t pval = 1;
     tmp = strdup(ports);
-    ptr = strtok(tmp, delim);
-
-    while (ptr != NULL) {
-        ptr = trim_space(ptr);
-        port = (uint16_t)(strtoi(ptr));
-        bpf_map_update_elem(map_fd[4], &port, &pval, 0);
-        ptr = strtok(NULL, delim);
-    }
-
-    /*while((ptr = strsep(&tmp, delim)) != NULL)
+    while((ptr = strsep(&tmp, delim)) != NULL)
     {
         ptr = trim_space(ptr);
         port = (uint16_t)(strtoi(ptr));
         bpf_map_update_elem(map_fd[4], &port, &pval, 0);
-    }*/
-
-    free(tmp);
+    }
 }
 
 static int // 0 on success and sets prog_fd and map_fd, non-zero on failure and sets bpf_log_buf.
 load_ratelimiting_bpf_file(const char* filename)
 {
     struct bpf_object_open_opts opts = { 0 };
-    struct bpf_object* object = bpf_object__open_file(filename, &opts);
+    struct bpf_object* object = bpf_object__open(filename);
     if (object == NULL) {
         return -1;
     }
@@ -318,8 +312,8 @@ int main(int argc, char **argv)
                 break;
             case 'm':
                 if(optarg) {
-                    len = get_length("C:\\leaf\\sys\\fs\\bpf\\xdp_root_pass_array");
-                    strncpy(prev_prog_map, "C:\\leaf\\sys\\fs\\bpf\\xdp_root_pass_array", len);
+                    len = get_length(optarg);
+                    strncpy(prev_prog_map, optarg, len);
                     prev_prog_map[len] = '\0';
                 }
                 break;
