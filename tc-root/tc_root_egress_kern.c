@@ -7,12 +7,11 @@
 #include "tc_root_common.h"
 
 struct {
-        __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
-        __type(key, int);
-        __type(value, int);
-        __uint(max_entries, ROOT_ARRAY_SIZE);
+    __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+    __type(key, int);
+    __type(value, int);
+    __uint(max_entries, ROOT_ARRAY_SIZE);
 } tc_egress_root_array SEC(".maps");
-
 
 SEC("tc-egress-root")
 int tc_egress_root(struct __sk_buff *skb) {

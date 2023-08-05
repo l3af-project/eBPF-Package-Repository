@@ -17,9 +17,9 @@
 /* Helper macro to print out debug messages */
 #define bpf_printk(fmt, ...)				\
 ({							\
-	char ____fmt[] = fmt;				\
-	bpf_trace_printk(____fmt, sizeof(____fmt),	\
-			 ##__VA_ARGS__);		\
+    char ____fmt[] = fmt;				\
+    bpf_trace_printk(____fmt, sizeof(____fmt),	\
+        ##__VA_ARGS__);		\
 })
 
 /*
