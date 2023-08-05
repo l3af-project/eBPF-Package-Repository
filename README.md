@@ -12,4 +12,4 @@ All submissions will be manually reviewed and once approved, programs will be pu
 - [ratelimiting](https://github.com/l3af-project/eBPF-Package-Repository/tree/main/ratelimiting)
 - [connection-limit](https://github.com/l3af-project/eBPF-Package-Repository/tree/main/connection-limit)
 - [ipfix-flow-exporter](https://github.com/l3af-project/eBPF-Package-Repository/tree/main/ipfix-flow-exporter)
-
+- [traffic-mirroring](https://github.com/l3af-project/eBPF-Package-Repository/tree/main/traffic-mirroring)
