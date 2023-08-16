@@ -21,15 +21,20 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include "bpf_load.h"
+#include "bpf/libbpf.h"
+#include "constants.h"
+#include "log.h"
+
 #ifdef __linux__
 #include "bpf_util.h"
+int map_fd[MAP_COUNT];
 #endif
 #ifdef WIN32
 #include <io.h>
 #include <winsock2.h>
 #include <netioapi.h>
 #define sleep(seconds) Sleep((seconds) * 1000)
+
 char* strsep(char** stringp, const char* delim)
 {
     static char* next_token = NULL;
@@ -52,17 +57,13 @@ int gettimeofday(struct timeval* tv, struct timezone* tz)
     return 0;
 }
 #include "bpf/bpf.h"
+#include "bpf_load.h"
 #endif
-#include "bpf/libbpf.h"
-
-#include "constants.h"
-#include "log.h"
 
 static const char *__doc__ =
         "Ratelimit incoming TCP connections using XDP";
 
 static int ifindex;
-
 FILE *info;
 static char prev_prog_map[1024];
 static const struct option long_options[] = {
@@ -142,9 +143,9 @@ static FILE* set_logfile(void)
 static int xdp_unlink_bpf_chain(const char *map_filename) {
     int ret = 0;
     int key = 0;
-    int map_fd = bpf_obj_get(map_filename);
-    if (map_fd > 0) {
-       ret = bpf_map_delete_elem(map_fd, &key);
+    int prog_map_fd = bpf_obj_get(map_filename);
+    if (prog_map_fd > 0) {
+       ret = bpf_map_delete_elem(prog_map_fd, &key);
        if (ret != 0) {
            log_err("Failed to remove XDP program from the chain");
        }
@@ -236,6 +237,85 @@ static void update_ports(char *ports)
     free(tmp);
 }
 
+#ifdef __linux__
+static int load_maps(struct bpf_object *obj) {
+    map_fd[0] = bpf_map__fd(bpf_object__find_map_by_name(obj, rl_config_map));
+    if (map_fd[0] < 0)
+    {
+        fprintf(stderr, "Failed to get rl_config_map FD\n");
+        return 1;
+    }
+    map_fd[1] = bpf_map__fd(bpf_object__find_map_by_name(obj, rl_window_map));
+    if (map_fd[1] < 0)
+    {
+        fprintf(stderr, "Failed to get rl_window_map FD\n");
+        return 1;
+    }
+    map_fd[2] = bpf_map__fd(bpf_object__find_map_by_name(obj, rl_recv_count_map));
+    if (map_fd[1] < 0)
+    {
+        fprintf(stderr, "Failed to get rl_recv_count_map FD\n");
+        return 1;
+    }
+    map_fd[3] = bpf_map__fd(bpf_object__find_map_by_name(obj, rl_drop_count_map));
+    if (map_fd[1] < 0)
+    {
+        fprintf(stderr, "Failed to get rl_drop_count_map FD\n");
+        return 1;
+    }
+    map_fd[4] = bpf_map__fd(bpf_object__find_map_by_name(obj, rl_ports_map));
+    if (map_fd[4] < 0)
+    {
+        fprintf(stderr, "Failed to get rl_ports_map FD\n");
+        return 1;
+    }
+    map_fd[5] = bpf_map__fd(bpf_object__find_map_by_name(obj, xdp_rl_ingress_next_prog));
+    if (map_fd[5] < 0)
+    {
+        fprintf(stderr, "Failed to get xdp_rl_ingress_next_prog FD\n");
+        return 1;
+    }
+    return 0;
+}
+
+static struct bpf_object* load_bpf_programs(const char *bpf_file, int prog_fd[1])
+{
+    struct bpf_object *bpf_obj;
+    struct bpf_program *bpf_prog;
+
+    struct bpf_object_open_attr open_attr = {
+            .file = bpf_file,
+            .prog_type = BPF_PROG_TYPE_UNSPEC,
+    };
+    bpf_obj = bpf_object__open_xattr(&open_attr);
+    if (!bpf_obj)
+    {
+        fprintf(stderr, "ERR: failed to open object %s\n", bpf_file);
+        return NULL;
+    }
+
+    if (bpf_object__load(bpf_obj))
+    {
+        fprintf(stderr, "Failed to load BPF Object\n");
+        return NULL;
+    }
+    bpf_prog = bpf_program__next(NULL, bpf_obj);
+    if (!bpf_prog)
+    {
+        fprintf(stderr, "Couldn't find a program trace_inet_sock_set_state in the BPF file %s\n", bpf_file);
+        return NULL;
+    }
+
+    prog_fd[0] = bpf_program__fd(bpf_prog);
+    if (prog_fd[0] <= 0) {
+        fprintf(stderr, "Failed to get program FD\n");
+        return NULL;
+    }
+
+    return bpf_obj;
+}
+#endif
+
 int main(int argc, char **argv)
 {
     int longindex = 0, rate = 0, opt;
@@ -243,13 +323,18 @@ int main(int argc, char **argv)
     char bpf_obj_file[256];
     char ports[2048];
     verbosity = LOG_INFO;
+    char map_file_path[2048];
 #ifdef __linux__
     struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
 #endif
     int len = 0;
+    struct bpf_object *obj;
+    int prog_fd[2];
+
     snprintf(bpf_obj_file, sizeof(bpf_obj_file), "%s_kern.o", argv[0]);
 
     memset(&ports, 0, 2048);
+    memset(&map_file_path, 0, 2048);
 
     /* Parse commands line args */
     while ((opt = getopt_long(argc, argv, "h", long_options, &longindex)) != -1)
@@ -299,15 +384,24 @@ int main(int argc, char **argv)
 
     __u64 ckey = 0, rkey = 0, dkey = 0, pkey = 0;
     __u64 recv_count = 0, drop_count = 0;
-
+#ifdef __linux__
+    obj = load_bpf_programs(bpf_obj_file,prog_fd);
+    if (obj == NULL) {
+        log_err("load_bpf_programs failed\n");
+        return 1;
+    }
+#else
     if (load_bpf_file(bpf_obj_file)) {
         log_err("Failed to load bpf program");
         return 1;
     }
+#endif
     if (!prog_fd[0]) {
         log_err("Failed to get bpf program fd")
         return 1;
     }
+
+    log_info("loaded bpf file\n");
 
     /* Get the previous program's map fd in the chain */
     int prev_prog_map_fd = bpf_obj_get(prev_prog_map);
@@ -324,11 +418,21 @@ int main(int argc, char **argv)
      /* closing map fd to avoid stale map */
      close(prev_prog_map_fd);
 
+#ifdef __linux__
+     /* load map fds into map_fd array */
+    if (load_maps(obj) != 0) {
+        log_err("Failed to load bpf maps");
+        exit(EXIT_FAILURE);
+    }
+#endif
+
     int next_prog_map_fd = bpf_obj_get(xdp_rl_ingress_next_prog);
     if (next_prog_map_fd < 0) {
-        log_info("Failed to fetch next prog map fd, creating one");
-        if (bpf_obj_pin(map_fd[5], xdp_rl_ingress_next_prog)) {
-            log_info("Failed to pin next prog fd map");
+        log_info("Failed to fetch next prog map fd, creating one %s", xdp_rl_ingress_next_prog);
+        sprintf(map_file_path,"%s/%s",pin_basedir,xdp_rl_ingress_next_prog);
+        int errorno = bpf_obj_pin(map_fd[5], map_file_path);
+        if (errorno) {
+            log_info("Failed to pin next prog fd map %d map name %s error %s", map_fd[5], map_file_path, strerror(errorno));
             exit(EXIT_FAILURE);
         }
     }

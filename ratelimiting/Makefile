@@ -1,3 +1,4 @@
+# Copyright Contributors to the L3AF Project.
 # SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
 LINUX_SRC_PATH ?= /usr/src/linux
@@ -5,13 +6,17 @@ BPF_SAMPLES_PATH := $(LINUX_SRC_PATH)/samples/bpf
 TOOLS_PATH := $(BPF_SAMPLES_PATH)/../../tools
 L3AF_SRC_PATH := $(CURDIR)
 
+# List of programs to build
+tprogs-y := ratelimiting
+
 # Libbpf dependencies
 LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
+
+ratelimiting-objs := ratelimiting_user.o
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
 always-y += ratelimiting_kern.o
-
 
 ifeq ($(ARCH), arm)
 # Strip all except -D__LINUX_ARM_ARCH__ option needed to handle linux
@@ -102,6 +107,7 @@ tar.zip:
 	@rm -f l3af_ratelimiting.tar.gz
 	@mkdir l3af_ratelimiting
 	@cp $(L3AF_SRC_PATH)/ratelimiting_kern.o l3af_ratelimiting/
+	@cp $(L3AF_SRC_PATH)/ratelimiting l3af_ratelimiting/
 	@tar -cvf l3af_ratelimiting.tar ./l3af_ratelimiting
 	@gzip l3af_ratelimiting.tar
 
@@ -128,7 +134,6 @@ targets += syscall_nrs.s
 clean-files += syscall_nrs.h
 
 FORCE:
-
 
 # Verify LLVM compiler tools are available and bpf target is supported by llc
 .PHONY: verify_cmds verify_target_bpf $(CLANG) $(LLC)
