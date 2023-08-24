@@ -17,8 +17,7 @@ const char* bpf_path = "/sys/fs/bpf/";
 const char* ingress_dir = "ingress";
 const char* egress_dir = "egress";
 
-int ipfix_export_ingress_local_port = 4755;
-int ipfix_export_egress_local_port = 4756;
+
 bool chain = false;
 char* remote_ip = NULL;
 char* bpf_map_file_path = NULL;
@@ -117,9 +116,9 @@ bool delete_inactive_flow(int flow_idle_counter, int map_fd, int last_map_fd, un
 int get_port(int dir) {
     int port = 0;
     if (dir == INGRESS)
-	 port = ipfix_export_ingress_local_port;
+	 port = IPFIX_EXPORT_INGRESS_LOCAL_PORT;
     else if (dir == EGRESS)
-	 port = ipfix_export_egress_local_port;
+	 port = IPFIX_EXPORT_EGRESS_LOCAL_PORT;
 
     return port;
 }
