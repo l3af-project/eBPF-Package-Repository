@@ -1,4 +1,5 @@
-// Copyright Contributors to the L3AF Project.
+// Copyright Contributors to the L3AF P
+// object.
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
 /* TC program to filter and mirror the ingress traffic on a given interface
@@ -113,12 +114,12 @@ int do_route(int socket, int cmd, int flags, _inet_addr *remote_ip,
 
     if (gateway_ip->bitlen != 0) {
         rtattr_add(&nl_request.n, sizeof(nl_request), RTA_GATEWAY,
-                   &gateway_ip->data, gateway_ip->bitlen / 8);
+                   &gateway_ip->data, (gateway_ip->bitlen) >> 3);
         nl_request.r.rtm_scope = 0;
         nl_request.r.rtm_family = gateway_ip->family;
     }
     rtattr_add(&nl_request.n, sizeof(nl_request), RTA_DST, &remote_ip->data,
-               remote_ip->bitlen / 8);
+               (remote_ip->bitlen) >> 3);
     rtattr_add(&nl_request.n, sizeof(nl_request), RTA_OIF, &nic_id,
                sizeof(int));
 
@@ -713,7 +714,7 @@ static void bin(unsigned n)
 {
     fprintf(stdout, "Binary: \n");
     unsigned i;
-    for (i = 1 << 31; i > 0; i = i / 2) {
+    for (i = 1 << 31; i > 0; i = i >> 1) {
         (n & i) ? fprintf(stdout, "1") : fprintf(stdout, "0");
     }
     fprintf(stdout, "\n");
