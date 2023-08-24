@@ -27,6 +27,7 @@ int bpf_map_fd = -1;
 int egress_fd = -1, last_egress_fd = -1, ingress_fd = -1, last_ingress_fd = -1;
 int flow_timeout_counter = 3;
 char *tc_cmd = "tc";
+int if_idx;
 
 const struct option long_options[] = {
     {"help",         no_argument, NULL, 'h' },
@@ -44,8 +45,8 @@ const struct option long_options[] = {
 const char* ingress_sec = "ingress_flow_monitoring";
 const char* egress_sec =  "egress_flow_monitoring";
 
-extern FILE *info;
-extern int verbosity;
+FILE *info;
+int verbosity;
 
 static flow_record_t *flow_rec_to_create_ipfix = NULL;
 
@@ -116,9 +117,9 @@ bool delete_inactive_flow(int flow_idle_counter, int map_fd, int last_map_fd, un
 int get_port(int dir) {
     int port = 0;
     if (dir == INGRESS)
-	 port = IPFIX_EXPORT_INGRESS_LOCAL_PORT;
+	 port = IPFIX_EXPORT_INGRESS_LOCAL_PORT ;
     else if (dir == EGRESS)
-	 port = IPFIX_EXPORT_EGRESS_LOCAL_PORT;
+	 port = IPFIX_EXPORT_EGRESS_LOCAL_PORT ;
 
     return port;
 }

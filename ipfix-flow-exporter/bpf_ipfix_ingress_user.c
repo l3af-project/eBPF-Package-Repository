@@ -12,9 +12,7 @@ static const char *__doc__=" BPF IPFIX : To get packet flow data by handling the
 /* Exit return codes */
 #define EXIT_OK                 0
 #define EXIT_FAIL               1
-int if_idx;
-FILE *info;
-int verbosity;
+
 const char ingress[] = "ingress_flow_monitoring";
 
 /* Ingress Specific variables */

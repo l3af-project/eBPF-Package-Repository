@@ -42,6 +42,7 @@ extern const char* ipfix_egress_jmp_table;
 extern const char* bpf_path;
 extern const char* ingress_dir;
 extern const char* egress_dir;
+
 extern bool chain;
 extern char *remote_ip, *bpf_map_file_path, *tc_cmd;
 extern int flow_timeout, remote_port, bpf_map_fd;

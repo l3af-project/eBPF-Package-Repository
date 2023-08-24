@@ -14,9 +14,7 @@ static const char *__doc__=" BPF IPFIX : To get packet flow data by handling the
 #define EXIT_FAIL               1
 
 const char egress[] = "egress_flow_monitoring";
-FILE *info;
-int verbosity;
-int if_idx;
+
 /* Ingress Specific variables */
 bool attach_tc_egress_filter = false;
 char if_name[IF_NAMESIZE];
