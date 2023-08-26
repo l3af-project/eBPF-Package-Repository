@@ -17,8 +17,7 @@ const char* bpf_path = "/sys/fs/bpf/";
 const char* ingress_dir = "ingress";
 const char* egress_dir = "egress";
 
-int ipfix_export_ingress_local_port = 4755;
-int ipfix_export_egress_local_port = 4756;
+
 bool chain = false;
 char* remote_ip = NULL;
 char* bpf_map_file_path = NULL;
@@ -28,6 +27,7 @@ int bpf_map_fd = -1;
 int egress_fd = -1, last_egress_fd = -1, ingress_fd = -1, last_ingress_fd = -1;
 int flow_timeout_counter = 3;
 char *tc_cmd = "tc";
+int if_idx;
 
 const struct option long_options[] = {
     {"help",         no_argument, NULL, 'h' },
@@ -45,8 +45,8 @@ const struct option long_options[] = {
 const char* ingress_sec = "ingress_flow_monitoring";
 const char* egress_sec =  "egress_flow_monitoring";
 
-extern FILE *info;
-extern int verbosity;
+FILE *info;
+int verbosity;
 
 static flow_record_t *flow_rec_to_create_ipfix = NULL;
 
@@ -117,9 +117,9 @@ bool delete_inactive_flow(int flow_idle_counter, int map_fd, int last_map_fd, un
 int get_port(int dir) {
     int port = 0;
     if (dir == INGRESS)
-	 port = ipfix_export_ingress_local_port;
+	 port = IPFIX_EXPORT_INGRESS_LOCAL_PORT ;
     else if (dir == EGRESS)
-	 port = ipfix_export_egress_local_port;
+	 port = IPFIX_EXPORT_EGRESS_LOCAL_PORT ;
 
     return port;
 }
