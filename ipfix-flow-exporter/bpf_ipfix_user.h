@@ -29,22 +29,24 @@
 #include "log.h"
 #include "bpf_util.h"
 
-const char* egress_bpf_map ;
-const char* last_egress_bpf_map ;
-const char* ingress_bpf_map ;
-const char* last_ingress_bpf_map ;
-const char* ipfix_ingress_jmp_table;
-const char* ipfix_egress_jmp_table;
-const char* bpf_path;
-const char* ingress_dir;
-const char* egress_dir;
+#define IPFIX_EXPORT_INGRESS_LOCAL_PORT 4755
+#define IPFIX_EXPORT_EGRESS_LOCAL_PORT 4756
 
-int ipfix_export_ingress_local_port, ipfix_export_egress_local_port;
-bool chain;
-char *remote_ip, *bpf_map_file_path, *tc_cmd;
-int flow_timeout, remote_port, bpf_map_fd;
-int egress_fd, last_egress_fd, ingress_fd, last_ingress_fd;
-int flow_timeout_counter, if_idx;
+extern const char* egress_bpf_map ;
+extern const char* last_egress_bpf_map ;
+extern const char* ingress_bpf_map ;
+extern const char* last_ingress_bpf_map ;
+extern const char* ipfix_ingress_jmp_table;
+extern const char* ipfix_egress_jmp_table;
+extern const char* bpf_path;
+extern const char* ingress_dir;
+extern const char* egress_dir;
+
+extern bool chain;
+extern char *remote_ip, *bpf_map_file_path, *tc_cmd;
+extern int flow_timeout, remote_port, bpf_map_fd;
+extern int egress_fd, last_egress_fd, ingress_fd, last_ingress_fd;
+extern int flow_timeout_counter, if_idx;
 extern const struct option long_options[];
 
 enum iface_direction {
