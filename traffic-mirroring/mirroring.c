@@ -713,7 +713,7 @@ static void bin(unsigned n)
 {
     fprintf(stdout, "Binary: \n");
     unsigned i;
-    for (i = 1 << 31; i > 0; i = i / 2) {
+    for (i = 1 << 31; i > 0; i = i >> 1) {
         (n & i) ? fprintf(stdout, "1") : fprintf(stdout, "0");
     }
     fprintf(stdout, "\n");

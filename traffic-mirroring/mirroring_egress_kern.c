@@ -198,13 +198,13 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
     //      2th bit True: allow all/any destination port
     ifany = bpf_map_lookup_elem(&egress_any, &iface_key);
     if (ifany) {
-        if (((*ifany) >> (0)) % 2 == 1) {
+        if (((*ifany) >> (0)) & 1) {
             allow_all_ip = true;
         }
-        if (((*ifany) >> (1)) % 2 == 1) {
+        if (((*ifany) >> (1)) & 1) {
             allow_all_src_ports = true;
         }
-        if (((*ifany) >> (2)) % 2 == 1) {
+        if (((*ifany) >> (2)) & 1) {
             allow_all_dst_ports = true;
         }
     }
