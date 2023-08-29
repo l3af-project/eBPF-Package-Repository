@@ -513,7 +513,7 @@ int main(int argc, char **argv)
     int next_prog_map_fd = bpf_obj_get(xdp_cl_ingress_next_prog);
     if (next_prog_map_fd < 0) {
         log_info("Failed to fetch next prog map fd, creating one");
-        if (bpf_obj_pin(map_fd[4], xdp_cl_ingress_next_prog)) {
+        if (bpf_obj_pin(map_fd[6], xdp_cl_ingress_next_prog)) {
             log_info("Failed to pin next prog fd map");
             exit(EXIT_FAILURE);
         }
