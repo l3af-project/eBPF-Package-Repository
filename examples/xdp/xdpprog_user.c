@@ -15,11 +15,13 @@ static const char *__doc__ =
 #include <getopt.h>
 #include <sys/resource.h>
 
-#include "bpf_load.h"
 #include "bpf_util.h"
 #include <bpf/bpf.h>
-
+#define MAP_COUNT 1
 static int ifindex_in;
+
+int map_fd[MAP_COUNT];
+static const char *xdp_next_prog_map_name = "xdp_next_prog_array";
 
 static const char *xdp_next_prog_file = "/sys/fs/bpf/xdp_next_prog_array";
 static char prev_prog_map[1024];
@@ -94,6 +96,52 @@ static int get_length(const char *str)
    return len;
 }
 
+static struct bpf_object* load_bpf_programs(const char *bpf_file, int prog_fd)
+{
+    struct bpf_object *bpf_obj;
+    struct bpf_program *bpf_prog;
+
+    struct bpf_object_open_attr open_attr = {
+            .file = bpf_file,
+            .prog_type = BPF_PROG_TYPE_UNSPEC,
+    };
+    bpf_obj = bpf_object__open_xattr(&open_attr);
+    if (!bpf_obj)
+    {
+        fprintf(stderr, "ERR: failed to open object %s\n", bpf_file);
+        return NULL;
+    }
+
+    if (bpf_object__load(bpf_obj))
+    {
+        fprintf(stderr, "Failed to load BPF Object\n");
+        return NULL;
+    }
+    bpf_prog = bpf_program__next(NULL, bpf_obj);
+    if (!bpf_prog)
+    {
+        fprintf(stderr, "Couldn't find a program xdpprog in the BPF file %s\n", bpf_file);
+        return NULL;
+    }
+
+    prog_fd = bpf_program__fd(bpf_prog);
+    if (prog_fd <= 0) {
+        fprintf(stderr, "Failed to get program FD\n");
+        return NULL;
+    }
+
+    return bpf_obj;
+}
+
+static int load_maps(struct bpf_object *obj) {
+    map_fd[0] = bpf_map__fd(bpf_object__find_map_by_name(obj, xdp_next_prog_map_name));
+    if (map_fd[0] < 0) {
+        fprintf(stderr, "Failed to get conn count map FD\n");
+        return 1;
+    }
+
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -102,6 +150,8 @@ int main(int argc, char **argv)
     char *iface = NULL;
     int longindex = 0;
     struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
+    int prog_fd;
+    struct bpf_object *obj;
 
     /* Parse commands line args */
     while ((opt = getopt_long(argc, argv, "hq",
@@ -132,11 +182,13 @@ int main(int argc, char **argv)
 	    perror("setrlimit failed");
     }
 
-    if (load_bpf_file(filename)) {
-        fprintf(stderr, "%s", bpf_log_buf);
-        return EXIT_FAILURE;
+    obj = load_bpf_programs(filename,prog_fd);
+    if (obj == NULL) {
+        fprintf(stderr, "load_bpf_programs failed\n");
+        return 1;
     }
-    if (!prog_fd[0]) {
+
+    if (!prog_fd) {
         printf("load_bpf_file: %s\n", strerror(errno));
         return EXIT_FAILURE;
     }
@@ -150,13 +202,17 @@ int main(int argc, char **argv)
     /* Update current prog fd in the last prog map fd,
      * so it can chain the current one */
     int pkey=0;
-    if(bpf_map_update_elem(prev_prog_map_fd, &pkey, &(prog_fd[0]), 0)) {
+    if(bpf_map_update_elem(prev_prog_map_fd, &pkey, &prog_fd, 0)) {
         fprintf(stderr,"Failed to update prog fd in the chain");
         exit(EXIT_FAILURE);
     }
      /* closing map fd to avoid stale map */
      close(prev_prog_map_fd);
 
+    if (load_maps(obj) != 0) {
+        fprintf(stderr, "Failed to load bpf maps");
+        exit(EXIT_FAILURE);
+    }
     int next_prog_map_fd = bpf_obj_get(xdp_next_prog_file);
     if (next_prog_map_fd < 0) {
         printf("Failed to fetch next prog map fd, creating one");
@@ -171,10 +227,7 @@ int main(int argc, char **argv)
     signal(SIGTERM, signal_handler);
     signal(SIGHUP, signal_handler);
 
-    while(1)
-    {
-        sleep(60);
-    }
+    pause();
 
    return EXIT_SUCCESS;
 }

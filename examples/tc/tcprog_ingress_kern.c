@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
 #include <uapi/linux/bpf.h>
-#include "bpf_helpers.h"
 #include "tcprog_common.h"
 
 struct bpf_elf_map SEC("maps") tc_ingress_next_prog_array = {

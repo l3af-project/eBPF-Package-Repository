@@ -21,7 +21,6 @@ static const char *__doc__ =
 #include "bpf_util.h"
 #include "bpf/bpf.h"
 #include "bpf/libbpf.h"
-#include "bpf_load.h"
 
 #define CMD_MAX          2048
 #define CMD_MAX_TC       256
