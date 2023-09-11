@@ -34,50 +34,22 @@ static const char *__doc__ =
         "Connection limit incoming TCP connections using XDP";
 
 static int ifindex;
-static char prev_prog_map[1024];
 
-int map_fd[MAP_COUNT];
+int conn_count_map_fd = -1, tcp_conns_map_fd = -1, conn_info_map_fd = -1;
 
-static int xdp_unlink_bpf_chain(const char *map_filename) {
-    int ret = 0;
-    int key = 0;
-    int map_fd = bpf_obj_get(map_filename);
-
-    if (map_fd > 0) {
-        ret = bpf_map_delete_elem(map_fd, &key);
-        if (ret != 0)
-            log_err("Failed to remove XDP program from the chain");
-    }
-    else
-        log_info("Failed to fetch previous XDP program in the chain");
-
-    if (remove(xdp_cl_ingress_next_prog) < 0) {
-        log_warn("Failed to remove link to next XDP program in the chain");
-    }
-    return ret;
-}
-
-static void signal_handler(int sig)
-{
-    log_info("Received signal %d", sig);
-    int i = 0;
-    xdp_unlink_bpf_chain(prev_prog_map);
-    for (i=0; i<MAP_COUNT; i++) {
-        close(map_fd[i]);
-    }
-    if (info != NULL)
-        fclose(info);
-    exit(EXIT_SUCCESS);
-}
+static int get_length(const char *str);
+static int is_ipv4_loopback(uint32_t *addr4);
+static int is_ipv6_loopback(struct in6_addr *addr6);
+static int str_split(char *input, char *delimiter, char *word_array[]);
+static long strtoi(char *str, int base);
+static void addr6_parser(char *input, struct in6_addr *localaddr);
+int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file);
 
 static const struct option long_options[] = {
     {"help",      no_argument,        NULL, 'h' },
     {"iface",     required_argument,  NULL, 'i' },
-    {"max-conn",  required_argument,  NULL, 'c' },
-    {"ports",     optional_argument,  NULL, 'p' },
     {"verbose",   optional_argument,  NULL, 'v' },
     {"direction", optional_argument,  NULL, 'd' },
-    {"map-name",  optional_argument,  NULL, 'm' },
     {0,           0,                  NULL,  0  }
 };
 
@@ -216,26 +188,9 @@ static void addr6_parser(char *input, struct in6_addr *localaddr)
     free(s4);
 }
 
-static char* trim_space(char *str)
-{
-    char *end;
-    /* skip leading whitespace */
-    while (isspace(*str)) {
-        str = str + 1;
-    }
-    /* remove trailing whitespace */
-    end = str + get_length(str) - 1;
-    while (end > str && isspace(*end)) {
-        end = end - 1;
-    }
-    /* write null character */
-    *(end+1) = '\0';
-    return str;
-}
-
 /* Parse /proc/net/tcp6 and update bpf maps with needed data
-   map_fd[3]-> tcp_v6_conns: Holds TCP6 sockets in listen state
-   map_fd[0]->conn_count: Holds the number of concurrent inbound connections
+   conn_info_map_fd-> tcp_v6_conns: conn_info_map_fd: Holds TCP6 sockets in listen state
+   conn_count_map_fd->conn_count: conn_count_map_fd: Holds the number of concurrent inbound connections
    in ESTABLISHED state */
 static int parse_tcpv6(int lnr, char *line)
 {
@@ -293,21 +248,21 @@ static int parse_tcpv6(int lnr, char *line)
             log_info("Skipping loopback ipv6 connections in established state\n");
             return 0;
         }
-        if (bpf_map_lookup_elem(map_fd[2], &local_port_u, &val) == 0) {
-            ret = bpf_map_update_elem(map_fd[3], &skaddr, &sock_val, 0);
+        if (bpf_map_lookup_elem(tcp_conns_map_fd, &local_port_u, &val) == 0) {
+            ret = bpf_map_update_elem(conn_info_map_fd, &skaddr, &sock_val, 0);
             if (ret) {
                 log_info("Failed to update socket in bpf map\n");
                 perror("bpf_update_elem");
                 return 1;
             }
             log_info("Updated ipv6 established connection: %s\n", line);
-            if (bpf_map_lookup_elem(map_fd[0], &key, &count) != 0) {
+            if (bpf_map_lookup_elem(conn_count_map_fd, &key, &count) != 0) {
                 log_info("Failed to fetch current established connections\n");
                 return 1;
             }
             log_info("Updated TCPv6 connection in the map: %s\n", line);;
             count++;
-            if (bpf_map_update_elem(map_fd[0], &key, &count, 0) != 0) {
+            if (bpf_map_update_elem(conn_count_map_fd, &key, &count, 0) != 0) {
                 log_info("Failed to update current established connections\n");
                 return 1;
             }
@@ -318,8 +273,8 @@ static int parse_tcpv6(int lnr, char *line)
 }
 
 /* Parse /proc/net/tcp and update bpf maps with needed data
-   map_fd[2]-> tcp_v4_conns: Holds TCP sockets in listen state
-   map_fd[0]->conn_count: Holds the number of concurrent inbound connections
+   tcp_conns_map_fd->tcp_v4_conns: Holds TCP4 sockets in listen state
+   conn_count_map_fd->conn_count: Holds the number of concurrent inbound connections
    in ESTABLISHED state */
 static int parse_tcpv4(int lnr, char *line)
 {
@@ -374,20 +329,20 @@ static int parse_tcpv4(int lnr, char *line)
             return 0;
         }
 
-        if (bpf_map_lookup_elem(map_fd[2], &local_port_u, &val) == 0) {
-            ret = bpf_map_update_elem(map_fd[3], &skaddr, &sock_val, 0);
+        if (bpf_map_lookup_elem(tcp_conns_map_fd, &local_port_u, &val) == 0) {
+            ret = bpf_map_update_elem(conn_info_map_fd, &skaddr, &sock_val, 0);
             if (ret) {
                 log_info("Failed to update socket address in the bpf map\n");
                 perror("bpf_update_elem");
                 return 1;
             }
-            if (bpf_map_lookup_elem(map_fd[0], &key, &count) != 0) {
+            if (bpf_map_lookup_elem(conn_count_map_fd, &key, &count) != 0) {
                 log_info("Failed to fetch current established connections\n");
                 return 1;
             }
             log_info("Updated TCPv4 connection in the map: %s\n", line);
             count++;
-            if (bpf_map_update_elem(map_fd[0], &key, &count, 0) != 0) {
+            if (bpf_map_update_elem(conn_count_map_fd, &key, &count, 0) != 0) {
                 log_info("Failed to update current established connections\n");
                 return 1;
             }
@@ -419,155 +374,65 @@ static void parse_tcp(char *file, int (*proc)(int, char*))
     fclose(procinfo);
 }
 
-static void update_ports(char *ports)
+/* Validate map filepath */
+int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file)
 {
-    char *tmp, *ptr;
-    tmp = strdup(ports);
-    uint16_t port = 0;
-    int pval = 1;
-    while( (ptr = strsep(&tmp, delim)) != NULL )
-    {
-        ptr = trim_space(ptr);
-        port = (uint16_t)(strtoi(ptr, 10));
-        bpf_map_update_elem(map_fd[2], &port, &pval, 0);
-    }
-    free(tmp);
-}
-
-
-static int load_maps(struct bpf_object *obj) {
-    map_fd[0] = bpf_map__fd(bpf_object__find_map_by_name(obj, conn_count_map_name));
-    if (map_fd[0] < 0)
-    {
-        fprintf(stderr, "Failed to get conn count map FD\n");
-        return 1;
-    }
-    map_fd[1] = bpf_map__fd(bpf_object__find_map_by_name(obj, max_conn_map_name));
-    if (map_fd[1] < 0)
-    {
-        fprintf(stderr, "Failed to get max conn map FD\n");
-        return 1;
-    }
-    map_fd[2] = bpf_map__fd(bpf_object__find_map_by_name(obj, tcp_conns_map_name));
-    if (map_fd[1] < 0)
-    {
-        fprintf(stderr, "Failed to get max conn map FD\n");
-        return 1;
-    }
-    map_fd[3] = bpf_map__fd(bpf_object__find_map_by_name(obj, conn_info_map_name));
-    if (map_fd[1] < 0)
-    {
-        fprintf(stderr, "Failed to get max conn map FD\n");
-        return 1;
-    }
-    map_fd[4] = bpf_map__fd(bpf_object__find_map_by_name(obj, recv_count_map_name));
-    if (map_fd[4] < 0)
-    {
-        fprintf(stderr, "Failed to get receive count map FD\n");
-        return 1;
-    }
-    map_fd[5] = bpf_map__fd(bpf_object__find_map_by_name(obj, drop_count_map_name));
-    if (map_fd[5] < 0)
-    {
-        fprintf(stderr, "Failed to get drop count map FD\n");
-        return 1;
-    }
-    map_fd[6] = bpf_map__fd(bpf_object__find_map_by_name(obj, ingress_next_prog_map_name));
-    if (map_fd[6] < 0)
-    {
-        fprintf(stderr, "Failed to get ingress next program FD\n");
-        return 1;
+    snprintf(map_file, MAP_PATH_SIZE, "%s/%s/%s", map_base_dir, ifname, map_name);
+    log_info("map path filename %s", map_file);
+    struct stat st = {0};
+    if (stat(map_file, &st) != 0) {
+        return -1;
     }
     return 0;
 }
 
-
-static struct bpf_object* load_bpf_programs(const char *bpf_file, int prog_fd[2])
+static bool validate_ifname(const char *input_ifname, char *output_ifname)
 {
-    struct bpf_object *bpf_obj;
-    struct bpf_program *bpf_prog, *bpf_prog1;
+    size_t len;
+    int i;
 
-    struct bpf_object_open_attr open_attr = {
-            .file = bpf_file,
-            .prog_type = BPF_PROG_TYPE_UNSPEC,
-    };
-    bpf_obj = bpf_object__open_xattr(&open_attr);
-    if (!bpf_obj)
-    {
-        fprintf(stderr, "ERR: failed to open object %s\n", bpf_file);
-        return NULL;
+    len = get_length((void *)input_ifname);
+    if (len >= IF_NAMESIZE) {
+        return false;
     }
+    for (i = 0; i < len; i++) {
+        char c = input_ifname[i];
 
-    if (bpf_object__load(bpf_obj))
-    {
-        fprintf(stderr, "Failed to load BPF Object\n");
-        return NULL;
+        if (!(isalpha(c) || isdigit(c))) {
+            return false;
+        }
     }
-    bpf_prog = bpf_program__next(NULL, bpf_obj);
-    if (!bpf_prog)
-    {
-        fprintf(stderr, "Couldn't find a program trace_inet_sock_set_state in the BPF file %s\n", bpf_file);
-        return NULL;
-    }
-
-    prog_fd[0] = bpf_program__fd(bpf_prog);
-    if (prog_fd[0] <= 0) {
-        fprintf(stderr, "Failed to get program FD\n");
-        return NULL;
-    }
-
-    bpf_prog1 = bpf_program__next(bpf_prog, bpf_obj);
-    if (!bpf_prog1)
-    {
-        fprintf(stderr, "Couldn't find a program _xdp_limit_conn in the BPF file %s\n", bpf_file);
-        return NULL;
-    }
-    prog_fd[1] = bpf_program__fd(bpf_prog1);
-    if (prog_fd[1] <= 0) {
-        fprintf(stderr, "Failed to get program FD\n");
-        return NULL;
-    }
-
-    return bpf_obj;
+    strncpy(output_ifname, input_ifname, len);
+    output_ifname[len] = '\0';
+    return true;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
-    int opt, long_index = 0, key = 0, len = 0;
-    struct bpf_object *obj;
-    int prog_fd[2];
-    uint64_t conn_val = 0, max_conn_val = 0;
+    int opt, long_index = 0;
+    char ports[PORT_LENGTH];
+    char map_file[MAP_PATH_SIZE];
+    char ifname[IF_NAMESIZE];
 
-    char filename[256], ports[2048];
     verbosity = LOG_INFO;
 
-    memset(ports,'\0',2048);
-
+    memset(ports, '\0', PORT_LENGTH);
+    memset(ifname, '\0', IF_NAMESIZE);
     while ((opt = getopt_long(argc, argv, "hq",
                               long_options, &long_index)) != -1) {
         switch (opt) {
             case 'i':
-                ifindex = if_nametoindex(optarg);
-                break;
-            case 'c':
-                max_conn_val = strtoi(optarg, 10);
-                break;
-            case 'p':
-                len = get_length(optarg);
-                strncpy(ports, optarg, len);
-                ports[len] = '\0';
+                if (!validate_ifname(optarg, (char *) &ifname)) {
+                    fprintf(stderr, "ERR: input ifname invalid\n");
+                }
+                if (!(ifindex = if_nametoindex(ifname))) {
+                    fprintf(stderr, "ERR: ifname \"%s\" not real dev\n", ifname);
+                    return EXIT_FAILURE;
+                }
                 break;
             case 'v':
-                if(optarg)
-                    verbosity = (int)(strtoi(optarg, 10));
-                break;
-            case 'm':
-                if(optarg) {
-                    len = get_length(optarg);
-                    strncpy(prev_prog_map, optarg, len);
-                    prev_prog_map[len] = '\0';
-                }
+                if (optarg)
+                    verbosity = (int) (strtoi(optarg, 10));
                 break;
             case 'd':
                 /* Not honoured as of now */
@@ -580,106 +445,45 @@ int main(int argc, char **argv)
     }
     set_log_file();
     setrlimit(RLIMIT_MEMLOCK, &r);
-    snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
 
-    obj = load_bpf_programs(filename,prog_fd);
-    if (obj == NULL) {
-        log_err("load_bpf_programs failed\n");
-        return 1;
+    memset(map_file, '\0', MAP_PATH_SIZE);
+    if (get_bpf_map_file(ifname, conn_count_map_name, map_file) < 0) {
+        log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+        return EXIT_FAILURE;
     }
-    if (!prog_fd[0] || !prog_fd[1]) {
-        log_info("load_bpf_programs: program fds are nil \n");
-        return 1;
-    }
-    log_info("loaded bpf file\n");
-
-    /* Get the previous program's map fd in the chain */
-    int pkey = 0;
-    int prev_prog_map_fd = bpf_obj_get(prev_prog_map);
-
-    if (prev_prog_map_fd < 0) {
-        log_err("Failed to fetch previous xdp function in the chain");
-        exit(EXIT_FAILURE);
+    conn_count_map_fd = bpf_obj_get(map_file);
+    if (conn_count_map_fd < 0) {
+        log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+                map_file, strerror(errno), errno);
     }
 
-    /* Update current prog fd in the last prog map fd,
-     * so it can chain the current one */
-    if(bpf_map_update_elem(prev_prog_map_fd, &pkey, &(prog_fd[1]), 0)) {
-        log_err("Failed to update prog fd in the chain");
-        exit(EXIT_FAILURE);
+    memset(map_file, '\0', MAP_PATH_SIZE);
+    if (get_bpf_map_file(ifname, tcp_conns_map_name, map_file) < 0) {
+        log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+        return EXIT_FAILURE;
     }
-    /* closing map fd to avoid stale map */
-    close(prev_prog_map_fd);
-
-    if (load_maps(obj) != 0) {
-        log_err("Failed to load bpf maps");
-        exit(EXIT_FAILURE);
+    tcp_conns_map_fd = bpf_obj_get(map_file);
+    if (tcp_conns_map_fd < 0) {
+        log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+                map_file, strerror(errno), errno);
     }
 
-    int next_prog_map_fd = bpf_obj_get(xdp_cl_ingress_next_prog);
-    if (next_prog_map_fd < 0) {
-        log_info("Failed to fetch next prog map fd, creating one");
-        if (bpf_obj_pin(map_fd[6], xdp_cl_ingress_next_prog)) {
-            log_info("Failed to pin next prog fd map");
-            exit(EXIT_FAILURE);
-        }
+    memset(map_file, '\0', MAP_PATH_SIZE);
+    if (get_bpf_map_file(ifname, conn_info_map_name, map_file) < 0) {
+        log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+        return EXIT_FAILURE;
     }
-    log_info("Max connections value is %lu\n", max_conn_val);
-
-    int ret = bpf_map_update_elem(map_fd[1], &key, &max_conn_val, 0);
-    if (ret) {
-        perror("bpf_update_elem");
-        return 1;
-    }
-    log_info("conn value is %lu\n", conn_val);
-    ret = bpf_map_update_elem(map_fd[0], &key, &conn_val, 0);
-    if (ret) {
-        perror("bpf_update_elem");
-        return 1;
-    }
-
-    ret = bpf_map_update_elem(map_fd[4], &key, &conn_val, 0);
-    if (ret) {
-        perror("bpf_update_elem");
-        return 1;
-    }
-
-    if (get_length(ports))
-    {
-        log_info("Port list is %s\n", ports);
-        update_ports(ports);
-    }
-
-    ret = bpf_map_update_elem(map_fd[5], &key, &conn_val, 0);
-    if (ret) {
-        perror("bpf_update_elem");
-        return 1;
+    conn_info_map_fd = bpf_obj_get(map_file);
+    if (conn_info_map_fd < 0) {
+        log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+                map_file, strerror(errno), errno);
     }
 
     fflush(info);
     parse_tcp(PATH_PROCNET_TCP, parse_tcpv4);
     parse_tcp(PATH_PROCNET_TCP6, parse_tcpv6);
 
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-    signal(SIGKILL, signal_handler);
-
     fflush(info);
 
-#ifdef __linux__
-    signal(SIGHUP, signal_handler);
-    pause();
-#elif WIN32
-    Sleep(INFINITE);
-#endif
     return 0;
 }
-
-static int get_length(const char *str);
-static int is_ipv4_loopback(uint32_t *addr4);
-static int is_ipv6_loopback(struct in6_addr *addr6);
-static int str_split(char *input, char *delimiter, char *word_array[]);
-static long strtoi(char *str, int base);
-static void addr6_parser(char *input, struct in6_addr *localaddr);
-static char* trim_space(char *str);
-static void update_ports(char *ports);
