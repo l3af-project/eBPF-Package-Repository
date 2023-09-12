@@ -63,3 +63,10 @@ jobs:
         run: |
           cd $LINUX_SRC_PATH/$BPF_PATH/$REPO/$PROG
           make
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: connection-limit-linux-artifact
+          path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/${{ env.PROG }}/l3af_connection_limit/*
+
