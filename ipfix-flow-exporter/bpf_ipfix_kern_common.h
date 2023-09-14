@@ -4,6 +4,8 @@
 #ifndef BPF_IPFIX_KERN_COMMON_H
 #define BPF_IPFIX_KERN_COMMON_H
 
+#define MAX_RECORDS 30000
+
 typedef struct flow_key_ {
     u32 sa;
     u32 da;
