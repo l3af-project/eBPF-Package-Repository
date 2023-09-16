@@ -43,71 +43,58 @@ struct saddr_key {
     __u8 data[4];
 };
 
-/* TODO: Describe what this PIN_GLOBAL_NS value 2 means???
- *
- * A file is automatically created here:
- *  /sys/fs/bpf/tc/globals/ingress
- */
-#define PIN_GLOBAL_NS 2
 #define MAX_ADDRESSES 50
 #define KEY_SIZE_IPV4 sizeof(struct bpf_lpm_trie_key) + sizeof(__u32)
 
-struct bpf_elf_map SEC("maps") redirect_iface = {
-    .type = BPF_MAP_TYPE_ARRAY,
-    .size_key = sizeof(int),
-    .size_value = sizeof(int),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 2,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __type(key, int);
+    __type(value, int);
+    __uint(max_entries, 1);
+} redirect_iface SEC(".maps");
 
-struct bpf_elf_map SEC("maps") ingress_any = {
-    .type = BPF_MAP_TYPE_ARRAY,
-    .size_key = sizeof(int),
-    .size_value = sizeof(int),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 2
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __type(key, int);
+    __type(value, int);
+    __uint(max_entries, 1);
+} ingress_any SEC(".maps");
 
-struct bpf_elf_map SEC("maps") src_address = {
-    .type = BPF_MAP_TYPE_LPM_TRIE,
-    .size_key = KEY_SIZE_IPV4,
-    .size_value = sizeof(__u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = MAX_ADDRESSES,
-    .flags = BPF_F_NO_PREALLOC,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_LPM_TRIE);
+    __type(key, KEY_SIZE_IPV4);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+    __uint(map_flags, BPF_F_NO_PREALLOC);
+} src_address SEC(".maps");
 
-struct bpf_elf_map SEC("maps") mirroring_ingress_jmp_table = { 
-    .type = BPF_MAP_TYPE_PROG_ARRAY,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 1
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, 1);
+} mirroring_ingress_jmp_table SEC(".maps");
 
-struct bpf_elf_map SEC("maps") ingress_src_port = {
-    .type = BPF_MAP_TYPE_HASH,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+} ingress_src_port SEC(".maps");
 
-struct bpf_elf_map SEC("maps") ingress_dst_port = {
-    .type = BPF_MAP_TYPE_HASH,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+} ingress_dst_port SEC(".maps");
 
-struct bpf_elf_map SEC("maps") ingress_proto = {
-    .type = BPF_MAP_TYPE_HASH,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+} ingress_proto SEC(".maps");
 
 /* Notice this section name is used when attaching TC filter
  *
@@ -133,7 +120,7 @@ static __always_inline int ingress_redirect(struct __sk_buff *skb)
 
     int *ifindex;
     int *ifany;
-    int iface_key = 1;
+    int iface_key = 0;
 
     /* Lookup what ifindex to redirect packets to */
     ifindex = bpf_map_lookup_elem(&redirect_iface, &iface_key);
@@ -255,7 +242,7 @@ static __always_inline int ingress_redirect(struct __sk_buff *skb)
     return TC_ACT_OK;
 }
 
-SEC("ingress_redirect")
+SEC("tc_ingress_redirect")
 int _ingress_redirect(struct __sk_buff *skb)
 {
     int ret;
