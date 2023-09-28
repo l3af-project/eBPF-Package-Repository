@@ -100,16 +100,14 @@ jobs:
           cmake --build build -j $(nproc) --config ${{env.BUILD_CONFIGURATION}}
  
       - name: Create artifact directory
-        if: matrix.configurations == 'Release'
         run: |
           mkdir upload_artifact
-          copy D:/a/eBPF-Package-Repository/eBPF-Package-Repository/xdp-root/build/xdp_root_kern.o upload_artifact
-          copy D:\a\eBPF-Package-Repository\eBPF-Package-Repository\build\xdp-root\Release\xdp_root.exe upload_artifact
+          copy D:\a\eBPF-Package-Repository\eBPF-Package-Repository\xdp-root\build\xdp_root_kern.o upload_artifact
+          copy D:\a\eBPF-Package-Repository\eBPF-Package-Repository\build\xdp-root\${{env.BUILD_CONFIGURATION}}\xdp_root.exe upload_artifact
 
       - name: Upload artifact
-        if: matrix.configurations == 'Release'
         uses: actions/upload-artifact@v3
         with:
-          name: xdp-root-windows-artifact
+          name: xdp-root-windows-${{env.BUILD_CONFIGURATION}}-artifact
           path: upload_artifact
 
