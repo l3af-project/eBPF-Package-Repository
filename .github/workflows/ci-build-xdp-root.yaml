@@ -45,15 +45,15 @@ jobs:
           echo "PROG=xdp-root" >> $GITHUB_ENV
           echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
           echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
-      
-      - name: Clone dependencies 
+
+      - name: Clone dependencies
         run: |
           git clone --branch v5.15 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
           cd $LINUX_SRC_PATH
           make defconfig
           make prepare
           make headers_install
-          
+
       - name: Clone kernel function repository
         uses: actions/checkout@v2
         with:
@@ -64,31 +64,50 @@ jobs:
           cd $LINUX_SRC_PATH/$BPF_PATH/$REPO/$PROG
           make
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: xdp-root-linux-artifact
+          path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/${{ env.PROG }}/l3af_xdp_root/*
+
   xdp-root-build-windows:
     strategy:
       matrix:
-        configurations: [Debug, Release]
+        configurations: ['Debug', 'Release']
     runs-on: windows-2019
     env:
       BUILD_CONFIGURATION: ${{matrix.configurations}}
       BUILD_PLATFORM: x64
 
     steps:
-    - uses: actions/checkout@b0e28b5ac45a892f91e7d036f8200cf5ed489415
-      with:
-        submodules: 'recursive'
+      - uses: actions/checkout@b0e28b5ac45a892f91e7d036f8200cf5ed489415
+        with:
+          submodules: "recursive"
 
-    - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@becb80cf9a036187bb1e07e74eb64e25850d757a
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@becb80cf9a036187bb1e07e74eb64e25850d757a
 
-    - name: Install tools
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-        choco install -y llvm
-        echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install tools
+        working-directory: ${{env.GITHUB_WORKSPACE}}
+        run: |
+          choco install -y llvm
+          echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-    - name: Build
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-        cmake -B build
-        cmake --build build -j $(nproc) --config ${{env.BUILD_CONFIGURATION}}
+      - name: Build
+        working-directory: ${{env.GITHUB_WORKSPACE}}
+        run: |
+          cmake -B build
+          cmake --build build -j $(nproc) --config ${{env.BUILD_CONFIGURATION}}
+ 
+      - name: Create artifact directory
+        run: |
+          mkdir upload_artifact
+          copy D:\a\eBPF-Package-Repository\eBPF-Package-Repository\xdp-root\build\xdp_root_kern.o upload_artifact
+          copy D:\a\eBPF-Package-Repository\eBPF-Package-Repository\build\xdp-root\${{env.BUILD_CONFIGURATION}}\xdp_root.exe upload_artifact
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: xdp-root-windows-${{env.BUILD_CONFIGURATION}}-artifact
+          path: upload_artifact
+
