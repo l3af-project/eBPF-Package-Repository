@@ -35,7 +35,7 @@ typedef enum log_level {
 #define LOG_ERR_STR "ERR"
 #define LOG_CRIT_STR "CRIT"
 
-#define DEFAULT_LOGFILE "/var/log/tb/l3af/connection_limit.log"
+#define DEFAULT_LOGFILE "/var/log/l3af/connection_limit.log"
 
 int verbosity ;
 
