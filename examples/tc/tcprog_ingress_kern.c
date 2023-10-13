@@ -4,14 +4,14 @@
 #include <uapi/linux/bpf.h>
 #include "tcprog_common.h"
 
-struct bpf_elf_map SEC("maps") tc_ingress_next_prog_array = {
-  .type = BPF_MAP_TYPE_PROG_ARRAY,
-  .size_key = sizeof(int),
-  .size_value = sizeof(int),
-  .pinning = PIN_GLOBAL_NS,
-  .max_elem = ROOT_ARRAY_SIZE,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, 1);
+} tc_ingress_next_prog_array SEC(".maps");
 
+/* SEC name should be prefixed with tc */
 SEC("tc-ingress")
 int tc_ingress(struct __sk_buff *skb) {
   /*
