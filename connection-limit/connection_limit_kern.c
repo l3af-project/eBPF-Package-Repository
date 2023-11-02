@@ -91,7 +91,7 @@ struct bpf_map_def SEC("maps") cl_recv_count_map = {
     .max_entries    = 1
 };
 
-/* Maintains the total number of conenctions dropped as the
+/* Maintains the total number of connections dropped as the
    connection limit is hit */
 struct bpf_map_def SEC("maps") cl_drop_count_map = {
     .type           = BPF_MAP_TYPE_HASH,
