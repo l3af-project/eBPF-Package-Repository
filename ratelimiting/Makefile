@@ -6,13 +6,8 @@ BPF_SAMPLES_PATH := $(LINUX_SRC_PATH)/samples/bpf
 TOOLS_PATH := $(BPF_SAMPLES_PATH)/../../tools
 L3AF_SRC_PATH := $(CURDIR)
 
-# List of programs to build
-tprogs-y := ratelimiting
-
 # Libbpf dependencies
 LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
-
-ratelimiting-objs := ratelimiting_user.o
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
@@ -107,7 +102,6 @@ tar.zip:
 	@rm -f l3af_ratelimiting.tar.gz
 	@mkdir l3af_ratelimiting
 	@cp $(L3AF_SRC_PATH)/ratelimiting_kern.o l3af_ratelimiting/
-	@cp $(L3AF_SRC_PATH)/ratelimiting l3af_ratelimiting/
 	@tar -cvf l3af_ratelimiting.tar ./l3af_ratelimiting
 	@gzip l3af_ratelimiting.tar
 
