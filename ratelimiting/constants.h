@@ -8,7 +8,7 @@
 #define PATH_MAX        4096
 #endif
 
-#define DEFAULT_LOGFILE "/var/log/tb/l3af/ratelimiting.log"
+#define DEFAULT_LOGFILE "/var/log/l3af/ratelimiting.log"
 
 #define MAP_COUNT	6
 #define MAX_PORTS       50
