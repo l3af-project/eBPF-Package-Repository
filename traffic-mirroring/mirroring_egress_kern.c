@@ -43,71 +43,58 @@ struct daddr_key {
     __u8 data[4];
 };
 
-/* TODO: Describe what this PIN_GLOBAL_NS value 2 means???
- *
- * A file is automatically created here:
- *  /sys/fs/bpf/tc/globals/egress
- */
-#define PIN_GLOBAL_NS 2
 #define MAX_ADDRESSES 50
 #define KEY_SIZE_IPV4 sizeof(struct bpf_lpm_trie_key) + sizeof(__u32)
 
-struct bpf_elf_map SEC("maps") redirect_iface = {
-    .type = BPF_MAP_TYPE_ARRAY,
-    .size_key = sizeof(int),
-    .size_value = sizeof(int),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 2,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __type(key, int);
+    __type(value, int);
+    __uint(max_entries, 1);
+} redirect_iface SEC(".maps");
 
-struct bpf_elf_map SEC("maps") egress_any = {
-    .type = BPF_MAP_TYPE_ARRAY,
-    .size_key = sizeof(int),
-    .size_value = sizeof(int),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 2
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __type(key, int);
+    __type(value, int);
+    __uint(max_entries, 1);
+} egress_any SEC(".maps");
 
-struct bpf_elf_map SEC("maps") dst_address = {
-    .type = BPF_MAP_TYPE_LPM_TRIE,
-    .size_key = KEY_SIZE_IPV4,
-    .size_value = sizeof(__u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = MAX_ADDRESSES,
-    .flags = BPF_F_NO_PREALLOC,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_LPM_TRIE);
+    __type(key, KEY_SIZE_IPV4);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+    __uint(map_flags, BPF_F_NO_PREALLOC);
+} dst_address SEC(".maps");
 
-struct bpf_elf_map SEC("maps") egress_src_port = {
-    .type = BPF_MAP_TYPE_HASH,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+} egress_src_port SEC(".maps");
 
-struct bpf_elf_map SEC("maps") egress_dst_port = {
-    .type = BPF_MAP_TYPE_HASH,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+} egress_dst_port SEC(".maps");
 
-struct bpf_elf_map SEC("maps") egress_proto = {
-    .type = BPF_MAP_TYPE_HASH,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+} egress_proto SEC(".maps");
 
-struct bpf_elf_map SEC("maps") mirroring_egress_jmp_table = {
-    .type = BPF_MAP_TYPE_PROG_ARRAY,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 1
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, 1);
+} mirroring_egress_jmp_table SEC(".maps");
 
 /* Notice this section name is used when attaching TC filter
  *
@@ -133,7 +120,7 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
 
     int *ifindex;
     int *ifany;
-    int iface_key = 1;
+    int iface_key = 0;
 
     /* Lookup what ifindex to redirect packets to */
     ifindex = bpf_map_lookup_elem(&redirect_iface, &iface_key);
@@ -254,7 +241,7 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
     return TC_ACT_OK;
 }
 
-SEC("egress_redirect")
+SEC("tc_egress_redirect")
 int _egress_redirect(struct __sk_buff *skb)
 {
     int ret;
