@@ -1,6 +1,8 @@
 // Copyright Contributors to the L3AF Project.
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
+#define KBUILD_MODNAME "foo"
+
 #include <uapi/linux/bpf.h>
 #include <uapi/linux/if_ether.h>
 #include <uapi/linux/if_packet.h>
@@ -16,48 +18,8 @@
 #include "bpf_ipfix_kern_common.h"
 
 #define DEBUG 1
-
 #define EGRESS 1
-
 #define ICMP 1
-
-#define bpf_printk(fmt, ...)                                    \
-({                                                              \
-               char ____fmt[] = fmt;                            \
-               bpf_trace_printk(____fmt, sizeof(____fmt),       \
-                                ##__VA_ARGS__);                 \
-})
-
-#define PIN_GLOBAL_NS 2
-#define PIN_OBJECT_NS  1
-
-
-/* EGRESS MAP FOR FLOW RECORD INFO */
-struct bpf_elf_map SEC("maps")  egress_flow_record_info_map = {
-    .type           = BPF_MAP_TYPE_HASH,
-    .size_key       = sizeof(u32),
-    .size_value     = sizeof(flow_record_t),
-    .pinning        = PIN_GLOBAL_NS,
-    .max_elem       = 30000,
-};
-
-/* EGRESS MAP FOR LAST RECORD PACKET INFO */
-struct bpf_elf_map SEC("maps")  last_egress_flow_record_info_map = {
-    .type           = BPF_MAP_TYPE_HASH,
-    .size_key       = sizeof(u32),
-    .size_value     = sizeof(flow_record_t),
-    .pinning        = PIN_GLOBAL_NS,
-    .max_elem       = 30000,
-};
-
-/* EGRESS MAP FOR CHAINING */
-struct bpf_elf_map SEC("maps") ipfix_egress_jmp_table = {
-        .type = BPF_MAP_TYPE_PROG_ARRAY,
-        .size_key = sizeof(u32),
-        .size_value = sizeof(u32),
-        .pinning = PIN_GLOBAL_NS,
-        .max_elem = 1
-};
 
 #define TCP_FIN  0x01
 #define TCP_SYN  0x02
@@ -79,12 +41,36 @@ struct bpf_elf_map SEC("maps") ipfix_egress_jmp_table = {
 
 #define TCP_FLAGS (TCP_FIN|TCP_SYN|TCP_RST|TCP_ACK|TCP_URG|TCP_ECE|TCP_CWR)
 
+/* EGRESS MAP FOR FLOW RECORD INFO */
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, flow_record_t);
+    __uint(max_entries, MAX_RECORDS);
+} egress_flow_record_info_map SEC(".maps");
+
+/* EGRESS MAP FOR LAST RECORD PACKET INFO */
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, flow_record_t);
+    __uint(max_entries, MAX_RECORDS);
+} last_egress_flow_record_info_map SEC(".maps");
+
+/* EGRESS MAP FOR CHAINING */
+struct {
+    __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, 1);
+} ipfix_egress_jmp_table SEC(".maps");
+
 static u32 flow_key_hash (const flow_key_t f) {
     u32 hash_val = (((u32)f.sa * 0xef6e15aa)
                 ^((u32)f.da * 0x65cd52a0)
                 ^ ((u32)f.sp * 0x8216)
                 ^ ((u32)f.dp * 0xdda37)
-                ^ ((u32)f.prot * 0xbc06)) ;
+                ^ ((u32)f.prot * 0xbc06));
     return hash_val;
 }
 
@@ -305,7 +291,7 @@ static __always_inline bool parse_egress_eth(struct ethhdr *eth, void *data_end,
     return true;
 }
 
-SEC("egress_flow_monitoring")
+SEC("tc_egress_flow_monitoring")
 int _egress_flow_monitoring(struct __sk_buff *skb)
 {
     void *data     = (void *)(long)skb->data;

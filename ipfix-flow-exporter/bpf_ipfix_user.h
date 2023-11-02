@@ -38,9 +38,9 @@ extern const char* ingress_bpf_map ;
 extern const char* last_ingress_bpf_map ;
 extern const char* ipfix_ingress_jmp_table;
 extern const char* ipfix_egress_jmp_table;
-extern const char* bpf_path;
 extern const char* ingress_dir;
 extern const char* egress_dir;
+static const char map_base_dir[] = "/sys/fs/bpf/tc/globals";
 
 extern bool chain;
 extern char *remote_ip, *bpf_map_file_path, *tc_cmd;
@@ -54,6 +54,7 @@ enum iface_direction {
   EGRESS  = 1,
 };
 
+#define MAP_PATH_SIZE   1024
 
 unsigned long get_current_time_ns(void);
 void get_random_number(unsigned int *fid);
@@ -124,4 +125,6 @@ bool validate_map(const char* input);
 int tc_cmd_filter(const char* dev, int dir, const char* action);
 
 int validate_chain_args(const char *map_name);
+
+int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file);
 #endif

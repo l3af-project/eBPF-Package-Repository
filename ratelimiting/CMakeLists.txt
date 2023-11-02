@@ -16,18 +16,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 endif()
 
 #
-# eBPF application configuration
-#
-
-include_directories(../windows)
-include_directories(../external/win-c/include)
-add_executable(ratelimiting ratelimiting_user.c ../external/win-c/source/getopt.c ../windows/bpf_load.c)
-target_link_libraries(ratelimiting PRIVATE iphlpapi)
-target_link_libraries(ratelimiting PRIVATE ebpfapi)
-add_definitions(-D_CRT_SECURE_NO_WARNINGS) # Allow use of strerror
-set_property(TARGET ratelimiting PROPERTY VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/eBPF-for-Windows/build/native/ebpf-for-windows.props)
-
-#
 # eBPF program configuration
 #
 
