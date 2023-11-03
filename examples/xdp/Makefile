@@ -5,13 +5,8 @@ BPF_SAMPLES_PATH := $(LINUX_SRC_PATH)/samples/bpf
 TOOLS_PATH := $(BPF_SAMPLES_PATH)/../../tools
 L3AF_SRC_PATH := $(CURDIR)
 
-# List of programs to build
-tprogs-y := xdpprog 
-
 # Libbpf dependencies
 LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
-
-xdpprog-objs := xdpprog_user.o 
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
