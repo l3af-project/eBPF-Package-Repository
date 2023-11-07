@@ -33,7 +33,7 @@ int populate_egress_fds(void) {
         return EXIT_FAILURE;
     }
 
-    egress_fd = bpf_obj_get(&map_file);
+    egress_fd = bpf_obj_get(map_file);
     if (egress_fd < 0) {
         fprintf(stderr, "ERROR: cannot open bpf_obj_get(%s)",
                         egress_bpf_map);
@@ -45,7 +45,7 @@ int populate_egress_fds(void) {
         fprintf(stderr, "ERROR: map file path (%s) doesn't exists", map_file);
         return EXIT_FAILURE;
     }
-    last_egress_fd = bpf_obj_get(&map_file);
+    last_egress_fd = bpf_obj_get(map_file);
     if (last_egress_fd < 0) {
         fprintf(stderr, "ERROR: cannot open bpf_obj_get(%s)", last_egress_bpf_map);
         close_logfile();
@@ -56,7 +56,7 @@ int populate_egress_fds(void) {
 
 int main(int argc, char **argv)
 {
-    int  opt = 0, long_index = 0, l = 0;
+    int  opt = 0, long_index = 0;
     verbosity = LOG_INFO;
     long flow_timeout = 0;
     char *eptr;

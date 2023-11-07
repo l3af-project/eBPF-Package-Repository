@@ -82,7 +82,6 @@ void cpy(char* dst, char* src);
 int rtattr_add(struct nlmsghdr *n, int maxlen, int type, const void *data, int alen);
 int do_route(int socket, int cmd, int flags, _inet_addr *remote_ip, _inet_addr *gateway_ip, int nic_id);
 int open_netlink(void);
-int exec_cmd(char *cmd[]);
 int nl_update_route(struct route_config r, int c);
 bool validate_netlink(struct route_config *r);
 bool validate_str(const char* input);
