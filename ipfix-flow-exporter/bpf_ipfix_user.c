@@ -179,32 +179,6 @@ bool process_flow_record_map(int map_fd, int last_map_fd, int dir)
     return ipfix_required;
 }
 
-int exec_cmd(char* cmd[]) {
-    int pid, status, ret = 0;
-    pid = fork();
-    if(pid > 0) {
-        waitpid(pid, &status, 0);
-        if(WIFEXITED(status))  {
-            log_info("Child process exited with status %d", status);
-        }
-    } else if(pid == 0) {
-        ret = execvp(cmd[0], cmd) ;
-        if( ret < 0) {
-            perror("Command execution failed");
-            return ret;
-        }
-    }
-    return ret;
-}
-
-int validate_filter_args(const char* dev)
-{
-    int ret = 1;
-    if (!validate_str(dev))
-        return 0;
-    return ret;
-}
-
 bool validate_ifname(const char* input_ifname, char *output_ifname)
 {
     size_t len;

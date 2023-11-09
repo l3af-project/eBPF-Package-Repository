@@ -135,25 +135,6 @@ int open_netlink(void)
     return sock;
 }
 
-int exec_cmd(char *cmd[])
-{
-    int pid, status, ret = 0;
-    pid = fork();
-    if (pid > 0) {
-        waitpid(pid, &status, 0);
-        if (WIFEXITED(status)) {
-            log_info("Child process exited with status %d", status);
-        }
-    } else if (pid == 0) {
-        ret = execvp(cmd[0], cmd);
-        if (ret < 0) {
-            perror("Command execution failed");
-            return ret;
-        }
-    }
-    return ret;
-}
-
 int nl_update_route(struct route_config r, int c)
 {
     _inet_addr remote_ip = { 0 };
