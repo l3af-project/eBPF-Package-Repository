@@ -585,7 +585,7 @@ int main(int argc, char **argv)
 
     int longindex = 0, opt, l;
     int tunnel_ifindex = -1, redirect_ifindex = -1, ifindex = -1;
-    char *direction = NULL, logfile[CMD_MAX];
+    char *direction = NULL;
     network_addr_t src_addr[MAX_ADDRESSES], dst_addr[MAX_ADDRESSES], tmp[MAX_ADDRESSES], gtw_addr[MAX_ADDRESSES];
     int slen = 0, dlen = 0, tmplen = 0, glen = 0;
     int ret = EXIT_SUCCESS;
@@ -725,21 +725,20 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
     if (nl_update_route(r, 0) == -1) {
-        log_err("Not able update the route for the tunnel interface\n");
+        log_err("Not able update the route for the tunnel interface");
         exit(EXIT_FAILURE);
     }
-    snprintf(logfile, CMD_MAX, "mirroring_%s.log", direction);
     fflush(info);
 
     memset(map_file, '\0', MAP_PATH_SIZE);
     if (get_bpf_map_file(ifname, redirect_mapfile, map_file) < 0) {
-        log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+        log_err("ERROR: map file path (%s) doesn't exists", map_file);
         return EXIT_FAILURE;
     }
-    log_info("Path file name redirect_mapfile %s\n", map_file);
+    log_info("Path file name redirect_mapfile %s", map_file);
     redirect_iface_fd = bpf_obj_get(map_file);
     if (redirect_iface_fd < 0) {
-        log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+        log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)",
                 map_file, strerror(errno), errno);
         usage(argv);
         ret = EXIT_FAILURE;
@@ -748,61 +747,61 @@ int main(int argc, char **argv)
     if (strcmp(direction, INGRESS) == 0) {
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, src_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         src_fd = bpf_obj_get(map_file);
         if (src_fd < 0) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n", map_file,
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)", map_file,
                     strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, ingress_src_port_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         ingress_src_port_fd = bpf_obj_get(map_file);
         if (ingress_src_port_fd < 0) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)",
                     map_file, strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, ingress_dst_port_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         ingress_dst_port_fd = bpf_obj_get(map_file);
         if (ingress_dst_port_fd < 0) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)",
                     map_file, strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, ingress_proto_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         ingress_proto_fd = bpf_obj_get(map_file);
         if (ingress_proto_fd < 0 && (strcmp(direction, INGRESS) == 0)) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)",
                     map_file, strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, ingress_any_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         ingress_any_fd = bpf_obj_get(map_file);
         log_info("ingress_any_fd: %d \n", ingress_any_fd);
         if (ingress_any_fd < 0 && (strcmp(direction, INGRESS) == 0)) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)",
                     map_file, strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
@@ -811,12 +810,12 @@ int main(int argc, char **argv)
     } else if (strcmp(direction, EGRESS) == 0) {
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, dst_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         dst_fd = bpf_obj_get(map_file);
         if (dst_fd < 0) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n", map_file,
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)", map_file,
                     strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
@@ -824,49 +823,49 @@ int main(int argc, char **argv)
 
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, egress_src_port_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         egress_src_port_fd = bpf_obj_get(map_file);
         if (egress_src_port_fd < 0) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)",
                     map_file, strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, egress_dst_port_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         egress_dst_port_fd = bpf_obj_get(map_file);
         if (egress_dst_port_fd < 0) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)",
                     map_file, strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, egress_proto_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         egress_proto_fd = bpf_obj_get(map_file);
         if (egress_proto_fd < 0) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)",
                     map_file, strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
         if (get_bpf_map_file(ifname, egress_any_mapfile, map_file) < 0) {
-            log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
+            log_err("ERROR: map file path (%s) doesn't exists", map_file);
             return EXIT_FAILURE;
         }
         egress_any_fd = bpf_obj_get(map_file);
         log_info("egress_any_fd: %d \n", egress_any_fd);
         if (egress_any_fd < 0) {
-            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)\n",
+            log_err("ERROR: cannot open bpf_obj_get(%s): %s(%d)",
                     map_file, strerror(errno), errno);
             usage(argv);
             ret = EXIT_FAILURE;
@@ -887,14 +886,14 @@ int main(int argc, char **argv)
             ret = EXIT_FAILURE;
         }
         if (verbose) {
-            log_info("Change egress redirect ifindex to: %d\n", tunnel_ifindex);
+            log_info("Change egress redirect ifindex to: %d", tunnel_ifindex);
         }
     }
 
     if (src_addr_filter) {
-        log_info("Source address filter is set\n");
+        log_info("Source address filter is set");
         if (strcmp(direction, EGRESS) == 0) {
-            log_info("Cannot use source filter for egress mirroring\n");
+            log_info("Cannot use source filter for egress mirroring");
             return (EXIT_FAILURE);
         }
         uint32_t src_val = 1;
@@ -912,18 +911,18 @@ int main(int argc, char **argv)
 
             // check for any src IP
             if (strcmp(src_addr[i].addr, "0.0.0.0") == 0) {
-                log_info("found 0/0/0/0, i.e., IP: 0.0.0.0\n");
+                log_info("found 0/0/0/0, i.e., IP: 0.0.0.0");
                 any_rep_ingress = setKthBit(any_rep_ingress, 0);
             } else {
                 // 0/0/0/0 IP not found
                 if (inet_pton(AF_INET, src_addr[i].addr, src_key->data) <= 0) {
                     log_err("Error converting source address to network "
-                            "address %s\n",
+                            "address %s",
                             src_addr[i].addr);
                     return (EXIT_FAILURE);
                 }
                 if (bpf_map_update_elem(src_fd, src_key, &src_val, 0) < 0) {
-                    log_err("Failed to update source endpoint bpf map\n");
+                    log_err("Failed to update source endpoint bpf map");
                     perror("ERROR: bpf_map_update_elem");
                     ret = EXIT_FAILURE;
                     free(src_key);
@@ -934,16 +933,16 @@ int main(int argc, char **argv)
     }
 
     if (dst_addr_filter) {
-        log_info("Destination address filter is set\n");
+        log_info("Destination address filter is set");
         if (strcmp(direction, INGRESS) == 0) {
-            log_info("Cannot use destination filter for ingress mirroring\n");
+            log_info("Cannot use destination filter for ingress mirroring");
             return (EXIT_FAILURE);
         }
         uint32_t dst_val = 1;
         int i = 0;
         for (i = 0; i < dlen; i++) {
-            log_info("dst_addr[i].addr is %s\n", dst_addr[i].addr);
-            log_info("dst_addr[i].pfx is %d\n", dst_addr[i].pfx);
+            log_info("dst_addr[i].addr is %s", dst_addr[i].addr);
+            log_info("dst_addr[i].pfx is %d", dst_addr[i].pfx);
             size_t dst_key_size;
 
             bpf_lpm_trie_key_t *dst_key = NULL;
@@ -957,13 +956,13 @@ int main(int argc, char **argv)
             } else {
                 if (inet_pton(AF_INET, dst_addr[i].addr, dst_key->data) <= 0) {
                     log_err("Failed to convert destination address to network "
-                            "address %s\n",
+                            "address %s",
                             dst_addr[i].addr);
                     ret = EXIT_FAILURE;
                     free(dst_key);
                 }
                 if (bpf_map_update_elem(dst_fd, dst_key, &dst_val, 0) < 0) {
-                    log_err("Failed to update destination endpoint bpf map\n");
+                    log_err("Failed to update destination endpoint bpf map");
                     perror("ERROR: bpf_map_update_elem");
                     ret = EXIT_FAILURE;
                     free(dst_key);
@@ -1006,9 +1005,9 @@ int main(int argc, char **argv)
         }
     }
 
-    log_info("any_rep_ingress%d\n", any_rep_ingress);
-    log_info("any_rep_ingress bin \n");
-    log_info("any_rep_egress%d\n", any_rep_egress);
-    log_info("any_rep_egress bin \n");
+    log_info("any_rep_ingress %d", any_rep_ingress);
+    log_info("any_rep_ingress bin");
+    log_info("any_rep_egress %d", any_rep_egress);
+    log_info("any_rep_egress bin");
     return ret;
 }

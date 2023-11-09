@@ -11,6 +11,7 @@ struct {
         __type(key, int);
         __type(value, int);
         __uint(max_entries, ROOT_ARRAY_SIZE);
+        __uint(pinning, LIBBPF_PIN_BY_NAME);
 } tc_egress_root_array SEC(".maps");
 
 
