@@ -47,6 +47,7 @@ struct {
     __type(key, u32);
     __type(value, flow_record_t);
     __uint(max_entries, MAX_RECORDS);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } ingress_flow_record_info_map SEC(".maps");
 
 
@@ -56,6 +57,7 @@ struct {
     __type(key, u32);
     __type(value, flow_record_t);
     __uint(max_entries, MAX_RECORDS);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } last_ingress_flow_record_info_map SEC(".maps");
 
 /* INGRESS MAP FOR CHAINING */
@@ -64,6 +66,7 @@ struct {
     __type(key, u32);
     __type(value, u32);
     __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } ipfix_ingress_jmp_table SEC(".maps");
 
 static u32 flow_key_hash (const flow_key_t f) {

@@ -14,7 +14,6 @@ typedef struct flow_key_ {
     u8 prot;
 }flow_key_t;
 
-
 typedef struct flow_record_ {
     flow_key_t key;                 /* identifies flow by 5-tuple */
     u64 np;                         /* number of packets */
@@ -32,16 +31,6 @@ typedef struct flow_record_ {
     u64 flow_id;                    /* flow id */
     u16 counter;                    /* flow_idle_counter */
 } flow_record_t;
-
-struct bpf_elf_map {
-    __u32 type;
-    __u32 size_key;
-    __u32 size_value;
-    __u32 max_elem;
-    __u32 flags;
-    __u32 id;
-    __u32 pinning;
-};
 
 #define flow_key_hash_mask 0x000fffff
 

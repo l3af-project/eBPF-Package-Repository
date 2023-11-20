@@ -9,6 +9,7 @@ struct {
     __type(key, u32);
     __type(value, u32);
     __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } tc_egress_next_prog_array SEC(".maps");
 
 /* SEC name should be prefixed with tc */

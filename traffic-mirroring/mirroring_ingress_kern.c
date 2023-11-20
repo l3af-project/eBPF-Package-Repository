@@ -27,17 +27,6 @@
         bpf_trace_printk(____fmt, sizeof(____fmt), ##__VA_ARGS__); \
     })
 
-/* Notice: TC and iproute2 bpf-loader uses another elf map layout */
-struct bpf_elf_map {
-    __u32 type;
-    __u32 size_key;
-    __u32 size_value;
-    __u32 max_elem;
-    __u32 flags;
-    __u32 id;
-    __u32 pinning;
-};
-
 struct saddr_key {
     __u32 prefix_len;
     __u8 data[4];
@@ -51,6 +40,7 @@ struct {
     __type(key, int);
     __type(value, int);
     __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } redirect_iface SEC(".maps");
 
 struct {
@@ -58,6 +48,7 @@ struct {
     __type(key, int);
     __type(value, int);
     __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } ingress_any SEC(".maps");
 
 struct {
@@ -66,6 +57,7 @@ struct {
     __type(value, u32);
     __uint(max_entries, MAX_ADDRESSES);
     __uint(map_flags, BPF_F_NO_PREALLOC);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } src_address SEC(".maps");
 
 struct {
@@ -73,6 +65,7 @@ struct {
     __type(key, u32);
     __type(value, u32);
     __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } mirroring_ingress_jmp_table SEC(".maps");
 
 struct {
@@ -80,6 +73,7 @@ struct {
     __type(key, u32);
     __type(value, u32);
     __uint(max_entries, MAX_ADDRESSES);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } ingress_src_port SEC(".maps");
 
 struct {
@@ -87,6 +81,7 @@ struct {
     __type(key, u32);
     __type(value, u32);
     __uint(max_entries, MAX_ADDRESSES);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } ingress_dst_port SEC(".maps");
 
 struct {
@@ -94,6 +89,7 @@ struct {
     __type(key, u32);
     __type(value, u32);
     __uint(max_entries, MAX_ADDRESSES);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } ingress_proto SEC(".maps");
 
 /* Notice this section name is used when attaching TC filter
