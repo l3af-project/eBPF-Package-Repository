@@ -928,7 +928,6 @@ int main(int argc, char **argv)
                     free(src_key);
                 }
             }
-            free(src_key);
         }
     }
 
@@ -968,7 +967,6 @@ int main(int argc, char **argv)
                     free(dst_key);
                 }
             }
-            free(dst_key);
         }
     }
     int key = 0;
