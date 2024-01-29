@@ -196,13 +196,7 @@ bool validate_netlink(struct route_config *r)
         fprintf(stderr, "ERR: No routing information provided\n");
         return false;
     }
-    if (strcmp(r->encap_type, "gue") == 0) {
-        r->type = "ipip";
-        r->name = "gue1";
-    } else {
-        fprintf(stderr, "ERR: --tunnel-type unknown value\n");
-        return false;
-    }
+    r->name = "tunnelRoute";
 
     getifaddrs(&ifap);
     for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
