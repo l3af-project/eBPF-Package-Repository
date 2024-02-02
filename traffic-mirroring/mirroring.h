@@ -46,7 +46,6 @@ struct route_config {
     char *nic_name;
     int nic_id;
     char *type;
-    char *encap_type;
 };
 
 static const char *redirect_mapfile = "redirect_iface";

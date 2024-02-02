@@ -248,7 +248,6 @@ static const struct option long_options[] = {
     { "dst-port", optional_argument, NULL, 'U' },
     { "protocol", optional_argument, NULL, 'r' },
     { "tunnel-remote-address", optional_argument, NULL, 'D' },
-    { "tunnel-type", optional_argument, NULL, 'T' },
     { "tunnel-local-port", optional_argument, NULL, 'p' },
     { "tunnel-remote-port", optional_argument, NULL, 'P' },
     { "quiet", no_argument, NULL, 'q' },
@@ -695,13 +694,6 @@ int main(int argc, char **argv)
                 r.dport = optarg;
                 l = get_length(r.dport);
                 r.dport[l] = '\0';
-            }
-            break;
-        case 'T':
-            if (optarg) {
-                r.encap_type = optarg;
-                l = get_length(r.encap_type);
-                r.encap_type[l] = '\0';
             }
             break;
         case 'q':
