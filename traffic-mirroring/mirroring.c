@@ -925,8 +925,8 @@ int main(int argc, char **argv)
                     log_err("Failed to update source endpoint bpf map");
                     perror("ERROR: bpf_map_update_elem");
                     ret = EXIT_FAILURE;
-                    free(src_key);
                 }
+                free(src_key);
             }
         }
     }
@@ -958,14 +958,13 @@ int main(int argc, char **argv)
                             "address %s",
                             dst_addr[i].addr);
                     ret = EXIT_FAILURE;
-                    free(dst_key);
                 }
                 if (bpf_map_update_elem(dst_fd, dst_key, &dst_val, 0) < 0) {
                     log_err("Failed to update destination endpoint bpf map");
                     perror("ERROR: bpf_map_update_elem");
                     ret = EXIT_FAILURE;
-                    free(dst_key);
                 }
+                free(dst_key);
             }
         }
     }
