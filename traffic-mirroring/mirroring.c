@@ -926,8 +926,8 @@ int main(int argc, char **argv)
                     perror("ERROR: bpf_map_update_elem");
                     ret = EXIT_FAILURE;
                 }
-                free(src_key);
             }
+            free(src_key);
         }
     }
 
@@ -964,8 +964,8 @@ int main(int argc, char **argv)
                     perror("ERROR: bpf_map_update_elem");
                     ret = EXIT_FAILURE;
                 }
-                free(dst_key);
             }
+            free(dst_key);
         }
     }
     int key = 0;
