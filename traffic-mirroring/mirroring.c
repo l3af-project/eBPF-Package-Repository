@@ -966,7 +966,7 @@ int main(int argc, char **argv)
                     log_err("Failed to update destination endpoint bpf map");
                     perror("ERROR: bpf_map_update_elem");
                     free(dst_key);
-		            return (EXIT_FAILURE);
+		    return (EXIT_FAILURE);
                 }
             }
             free(dst_key);
