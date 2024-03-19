@@ -883,7 +883,7 @@ int main(int argc, char **argv)
                                   &tunnel_ifindex, 0);
         if (ret) {
             perror("ERROR: bpf_map_update_elem");
-            ret = EXIT_FAILURE;
+            return EXIT_FAILURE;
         }
         if (verbose) {
             log_info("Change egress redirect ifindex to: %d", tunnel_ifindex);
@@ -919,13 +919,14 @@ int main(int argc, char **argv)
                     log_err("Error converting source address to network "
                             "address %s",
                             src_addr[i].addr);
+		            free(src_key);
                     return (EXIT_FAILURE);
                 }
                 if (bpf_map_update_elem(src_fd, src_key, &src_val, 0) < 0) {
                     log_err("Failed to update source endpoint bpf map");
                     perror("ERROR: bpf_map_update_elem");
-                    ret = EXIT_FAILURE;
                     free(src_key);
+                    return (EXIT_FAILURE);
                 }
             }
             free(src_key);
@@ -958,14 +959,14 @@ int main(int argc, char **argv)
                     log_err("Failed to convert destination address to network "
                             "address %s",
                             dst_addr[i].addr);
-                    ret = EXIT_FAILURE;
-                    free(dst_key);
+		            free(dst_key);
+                    return (EXIT_FAILURE);
                 }
                 if (bpf_map_update_elem(dst_fd, dst_key, &dst_val, 0) < 0) {
                     log_err("Failed to update destination endpoint bpf map");
                     perror("ERROR: bpf_map_update_elem");
-                    ret = EXIT_FAILURE;
                     free(dst_key);
+		    return (EXIT_FAILURE);
                 }
             }
             free(dst_key);
@@ -986,7 +987,7 @@ int main(int argc, char **argv)
         ret = bpf_map_update_elem(ingress_any_fd, &key, &any_rep_ingress, 0);
         if (ret) {
             perror("ERROR: bpf_map_update_elem");
-            ret = EXIT_FAILURE;
+            return EXIT_FAILURE;
         }
     } else if (strcmp(direction, EGRESS) == 0) {
         if (src_port_filter) {
@@ -1001,7 +1002,7 @@ int main(int argc, char **argv)
         ret = bpf_map_update_elem(egress_any_fd, &key, &any_rep_egress, 0);
         if (ret) {
             perror("ERROR: bpf_map_update_elem");
-            ret = EXIT_FAILURE;
+            return EXIT_FAILURE;
         }
     }
 
