@@ -4,11 +4,8 @@
 /* TCP Connection Limit
  */
 #define KBUILD_MODNAME "foo"
-#include <uapi/linux/bpf.h>
-#include <uapi/linux/ip.h>
-#include <uapi/linux/tcp.h>
-#include <net/sock.h>
-
+//#include <net/sock.h>
+#include "vmlinux.h"
 #include "bpf_helpers.h"
 #include "bpf_endian.h"
 
@@ -28,6 +25,8 @@
 /* IPv6 localhost */
 #define ipv6_lo_addr 0x1
 
+#define AF_INET		2	/* Internet IP Protocol 	*/
+#define AF_INET6	10	/* IP version 6			*/
 #define bpf_printk(fmt, ...)                                    \
 ({                                                              \
                char ____fmt[] = fmt;                            \
@@ -51,62 +50,62 @@ struct inet_sock_state_ctx {
 };
 
 /* Maintains the current concurrent TCP connection count */
-struct bpf_map_def SEC("maps") cl_conn_count = {
-    .type           = BPF_MAP_TYPE_HASH,
-    .key_size       = sizeof(uint32_t),
-    .value_size     = sizeof(uint64_t),
-    .max_entries    = 1,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(key_size, sizeof(uint32_t));
+    __uint(value_size, sizeof(uint64_t));
+   __uint(max_entries, 1);
+} cl_conn_count SEC(".maps");
 
 /* Holds the TCP connection limit set by the user */
-struct bpf_map_def SEC("maps") cl_max_conn = {
-    .type           = BPF_MAP_TYPE_ARRAY,
-    .key_size       = sizeof(uint32_t),
-    .value_size     = sizeof(uint64_t),
-    .max_entries    = 1,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(key_size, sizeof(uint32_t));
+    __uint(value_size, sizeof(uint64_t));
+   __uint(max_entries, 1);
+} cl_max_conn SEC(".maps");
 
 /* Maintains TCP listen ports */
-struct bpf_map_def SEC("maps") cl_tcp_conns = {
-    .type           = BPF_MAP_TYPE_HASH,
-    .key_size       = sizeof(uint16_t),
-    .value_size     = sizeof(uint32_t),
-    .max_entries    = 200,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(key_size, sizeof(uint16_t));
+    __uint(value_size, sizeof(uint32_t));
+   __uint(max_entries, 200);
+} cl_tcp_conns SEC(".maps");
 
 /* Maintains concurrent connection sockets */
-struct bpf_map_def SEC("maps") cl_conn_info = {
-    .type           = BPF_MAP_TYPE_HASH,
-    .key_size       = sizeof(uint64_t),
-    .value_size     = sizeof(uint32_t),
-    .max_entries    = 30000
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(key_size, sizeof(uint64_t));
+    __uint(value_size, sizeof(uint32_t));
+   __uint(max_entries, 30000);
+} cl_conn_info SEC(".maps");
 
 /* Maintains the total number of connections received(TCP-SYNs)
  * Used only for metrics visibility */
-struct bpf_map_def SEC("maps") cl_recv_count_map = {
-    .type           = BPF_MAP_TYPE_HASH,
-    .key_size       = sizeof(uint32_t),
-    .value_size     = sizeof(uint64_t),
-    .max_entries    = 1
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(key_size, sizeof(uint32_t));
+    __uint(value_size, sizeof(uint64_t));
+   __uint(max_entries, 1);
+} cl_recv_count_map SEC(".maps");
 
 /* Maintains the total number of connections dropped as the
    connection limit is hit */
-struct bpf_map_def SEC("maps") cl_drop_count_map = {
-    .type           = BPF_MAP_TYPE_HASH,
-    .key_size       = sizeof(uint32_t),
-    .value_size     = sizeof(uint64_t),
-    .max_entries    = 1
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(key_size, sizeof(uint32_t));
+    __uint(value_size, sizeof(uint64_t));
+   __uint(max_entries, 1);
+} cl_drop_count_map SEC(".maps");
 
 /* Maintains the prog fd of the next XDP program in the chain */
-struct bpf_map_def SEC("maps") xdp_cl_ingress_next_prog = {
-    .type           = BPF_MAP_TYPE_PROG_ARRAY,
-    .key_size       = sizeof(int),
-    .value_size     = sizeof(int),
-    .max_entries    = 1
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+    __uint(key_size, sizeof(int));
+    __uint(value_size, sizeof(int));
+   __uint(max_entries, 1);
+} xdp_cl_ingress_next_prog SEC(".maps");
 
 static __always_inline int is_ipv4_loopback(uint32_t *addr4)
 {
@@ -147,22 +146,22 @@ int trace_inet_sock_set_state(struct inet_sock_state_ctx *args)
             struct in6_addr src_addr, dst_addr;
 
             /* Read source address from the probe context */
-            if (bpf_probe_read(&src_addr.s6_addr32,
-                    sizeof(src_addr.s6_addr32), args->saddr_v6) != 0)
+            if (bpf_probe_read(&src_addr.in6_u.u6_addr32,
+                    sizeof(src_addr.in6_u.u6_addr32), args->saddr_v6) != 0)
                 return 0;
 
             /* Read destination address from the probe context */
-            if (bpf_probe_read(&dst_addr.s6_addr32,
-                    sizeof(dst_addr.s6_addr32), args->daddr_v6) != 0)
+            if (bpf_probe_read(&dst_addr.in6_u.u6_addr32,
+                    sizeof(dst_addr.in6_u.u6_addr32), args->daddr_v6) != 0)
                 return 0;
 
             /* Ignore if it is ipv6 loopback connection */
-            if (is_ipv6_loopback(src_addr.s6_addr32)) {
+            if (is_ipv6_loopback(src_addr.in6_u.u6_addr32)) {
                 return 0;
             }
 
             /* Ignore if it is ipv6 loopback connection */
-            if (is_ipv6_loopback(dst_addr.s6_addr32)) {
+            if (is_ipv6_loopback(dst_addr.in6_u.u6_addr32)) {
                 return 0;
             }
         }
@@ -210,21 +209,21 @@ int trace_inet_sock_set_state(struct inet_sock_state_ctx *args)
             struct in6_addr src_addr, dst_addr;
 
             /* Read source address from the probe context */
-            if (bpf_probe_read(&src_addr.s6_addr32,
-                    sizeof(src_addr.s6_addr32), args->saddr_v6) != 0)
+            if (bpf_probe_read(&src_addr.in6_u.u6_addr32,
+                    sizeof(src_addr.in6_u.u6_addr32), args->saddr_v6) != 0)
                 return 0;
 
             /* Read destination address from the probe context */
-            if (bpf_probe_read(&dst_addr.s6_addr32,
-                    sizeof(dst_addr.s6_addr32), args->daddr_v6) != 0)
+            if (bpf_probe_read(&dst_addr.in6_u.u6_addr32,
+                    sizeof(dst_addr.in6_u.u6_addr32), args->daddr_v6) != 0)
                 return 0;
 
             /* Ignore if it is ipv6 loopback connection */
-            if (is_ipv6_loopback(src_addr.s6_addr32))
+            if (is_ipv6_loopback(src_addr.in6_u.u6_addr32))
                 return 0;
 
             /* Ignore if it is ipv6 loopback connection */
-            if (is_ipv6_loopback(dst_addr.s6_addr32))
+            if (is_ipv6_loopback(dst_addr.in6_u.u6_addr32))
                 return 0;
         }
         /* Check ipv4 connections being closed */
