@@ -4,13 +4,7 @@
 /* Ratelimit incoming TCP connections using XDP */
 
 #define KBUILD_MODNAME "foo"
-
-#include <uapi/linux/bpf.h>
-#include <uapi/linux/if_ether.h>
-#include <uapi/linux/ip.h>
-#include <uapi/linux/in.h>
-#include <uapi/linux/tcp.h>
-
+#include "vmlinux.h"
 #include "bpf_helpers.h"
 #include "bpf_endian.h"
 
@@ -24,57 +18,57 @@
 #define TCP_ECE  0x40
 #define TCP_CWR  0x80
 #define TCP_FLAGS (TCP_FIN|TCP_SYN|TCP_RST|TCP_ACK|TCP_URG|TCP_ECE|TCP_CWR)
-
+#define ETH_P_IP	0x0800		/* Internet Protocol packet	*/
 /* Stores the ratelimit value(per second) */
-struct bpf_map_def SEC("maps") rl_config_map = {
-	.type		= BPF_MAP_TYPE_ARRAY,
-	.key_size	= sizeof(uint32_t),
-	.value_size	= sizeof(uint64_t),
-	.max_entries	= 1,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(key_size, sizeof(uint32_t));
+    __uint(value_size, sizeof(uint64_t));
+   __uint(max_entries, 1);
+} rl_config_map SEC(".maps");
 
 /* Maintains the timestamp of a window and the total number of
  * connections received in that window(window = 1 sec interval) */
-struct bpf_map_def SEC("maps") rl_window_map = {
-	.type		= BPF_MAP_TYPE_LRU_HASH,
-	.key_size	= sizeof(uint64_t),
-	.value_size	= sizeof(uint64_t),
-	.max_entries	= 1000,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_LRU_HASH);
+    __uint(key_size, sizeof(uint64_t));
+    __uint(value_size, sizeof(uint64_t));
+   __uint(max_entries, 1000);
+} rl_window_map SEC(".maps");
 
 /* Maintains the total number of connections received(TCP-SYNs)
  * Used only for metrics visibility */
-struct bpf_map_def SEC("maps") rl_recv_count_map = {
-	.type		= BPF_MAP_TYPE_HASH,
-	.key_size	= sizeof(uint64_t),
-	.value_size	= sizeof(uint64_t),
-	.max_entries	= 1
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(key_size, sizeof(uint64_t));
+    __uint(value_size, sizeof(uint64_t));
+   __uint(max_entries, 1);
+} rl_recv_count_map SEC(".maps");
 
 /* Maintains the total number of connections dropped as the ratelimit is hit
  * Used only for metrics visibility */
-struct bpf_map_def SEC("maps") rl_drop_count_map = {
-	.type		= BPF_MAP_TYPE_HASH,
-	.key_size	= sizeof(uint64_t),
-	.value_size	= sizeof(uint64_t),
-	.max_entries	= 1
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(key_size, sizeof(uint64_t));
+    __uint(value_size, sizeof(uint64_t));
+   __uint(max_entries, 1);
+} rl_drop_count_map SEC(".maps");
 
 /* Maintains the ports to be ratelimited */
-struct bpf_map_def SEC("maps") rl_ports_map = {
-        .type           = BPF_MAP_TYPE_HASH,
-        .key_size       = sizeof(uint16_t),
-        .value_size     = sizeof(uint8_t),
-        .max_entries    = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(key_size, sizeof(uint16_t));
+    __uint(value_size, sizeof(uint8_t));
+   __uint(max_entries, 50);
+} rl_ports_map SEC(".maps");
 
 /* Maintains the prog fd of the next XDP program in the chain */
-struct bpf_map_def SEC("maps") xdp_rl_ingress_next_prog = {
-        .type           = BPF_MAP_TYPE_PROG_ARRAY,
-        .key_size       = sizeof(int),
-        .value_size     = sizeof(int),
-        .max_entries    = 1
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+    __uint(key_size, sizeof(int));
+    __uint(value_size, sizeof(int));
+   __uint(max_entries, 1);
+} xdp_rl_ingress_next_prog SEC(".maps");
 
 
 /* TODO Use atomics or spin locks where naive increments are used depending
@@ -93,7 +87,7 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     /* Ignore other than ethernet packets */
     uint16_t eth_type = eth->h_proto;
-    if (ntohs(eth_type) != ETH_P_IP) {
+    if (bpf_ntohs(eth_type) != ETH_P_IP) {
         return XDP_PASS;
     }
 
