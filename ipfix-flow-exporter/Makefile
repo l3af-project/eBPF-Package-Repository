@@ -18,8 +18,8 @@ bpf_ipfix_egress-objs := bpf_ipfix_egress_user.o  bpf_ipfix_user.o ipfix.o
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += bpf_ipfix_ingress_kern.o
-always-y += bpf_ipfix_egress_kern.o
+always-y += bpf_ipfix_ingress.bpf.o
+always-y += bpf_ipfix_egress.bpf.o
 
 
 ifeq ($(ARCH), arm)
@@ -111,8 +111,8 @@ tar.zip:
 	@rm -f l3af_bpf_ipfix.tar.gz
 	@mkdir l3af_bpf_ipfix
 	@cp $(L3AF_SRC_PATH)/bpf_ipfix_ingress l3af_bpf_ipfix/
-	@cp $(L3AF_SRC_PATH)/bpf_ipfix_ingress_kern.o l3af_bpf_ipfix/
-	@cp $(L3AF_SRC_PATH)/bpf_ipfix_egress_kern.o l3af_bpf_ipfix/
+	@cp $(L3AF_SRC_PATH)/bpf_ipfix_ingress.bpf.o l3af_bpf_ipfix/
+	@cp $(L3AF_SRC_PATH)/bpf_ipfix_egress.bpf.o l3af_bpf_ipfix/
 	@cp $(L3AF_SRC_PATH)/bpf_ipfix_egress l3af_bpf_ipfix/
 	@tar -cvf l3af_bpf_ipfix.tar ./l3af_bpf_ipfix
 	@gzip l3af_bpf_ipfix.tar
@@ -206,7 +206,7 @@ $(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/x
 # 'opt' output to IR, and finally 'llc' generates bpf byte code.
 $(obj)/%.o: $(src)/%.c
 	@echo "  CLANG-bpf " $@
-	$(Q)$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(BPF_EXTRA_CFLAGS) \
+	$(Q)$(CLANG) $(NOSTDINC_FLAGS)  $(BPF_EXTRA_CFLAGS) \
 		-I$(obj) -I$(srctree)/tools/testing/selftests/bpf/ \
 		-I$(srctree)/tools/lib/  -I$(srctree)/tools/lib/bpf \
 		-D__KERNEL__ -D__BPF_TRACING__ -Wno-unused-value -Wno-pointer-sign \
@@ -215,7 +215,7 @@ $(obj)/%.o: $(src)/%.c
 		-Wno-address-of-packed-member -Wno-tautological-compare \
                 -Wno-unknown-warning-option $(CLANG_ARCH_ARGS) \
                 -fno-asynchronous-unwind-tables \
-                -I$(srctree)/samples/bpf/ -include asm_goto_workaround.h \
+                -I$(srctree)/samples/bpf/ \
                 -O2 -emit-llvm -Xclang -disable-llvm-passes -c $< -o - | \
                 $(OPT) -O2 -mtriple=bpf-pc-linux | $(LLVM_DIS) | \
                 $(LLC) -march=bpf $(LLC_FLAGS) -filetype=obj -o $@
