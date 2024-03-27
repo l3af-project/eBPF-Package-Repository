@@ -3,7 +3,6 @@
 
 #define KBUILD_MODNAME "foo"
 
-#include <uapi/linux/bpf.h>
 #include "tc_root_common.h"
 
 struct {

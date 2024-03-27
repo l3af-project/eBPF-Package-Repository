@@ -7,27 +7,20 @@
  *          use the 'tc' cmdline tool from iproute2 for loading and
  *          attaching bpf programs.
  */
-#include <uapi/linux/bpf.h>
-#include <uapi/linux/if_ether.h>
-#include <uapi/linux/if_packet.h>
-#include <uapi/linux/if_vlan.h>
-#include <uapi/linux/ip.h>
-#include <uapi/linux/in.h>
-#include <uapi/linux/tcp.h>
-#include <uapi/linux/udp.h>
-#include <uapi/linux/icmp.h>
-
-#include <uapi/linux/pkt_cls.h>
-#include <linux/skbuff.h>
+#include "../headers/vmlinux.h"
 #include "bpf_helpers.h"
-
+#include "bpf_endian.h"
+#define ETH_P_IP	0x0800		/* Internet Protocol packet	*/
+#define ETH_P_ARP	0x0806		/* Address Resolution packet	*/
+#define ETH_HLEN	14		/* Total octets in header.	 */
+#define TC_ACT_OK		0
 #define bpf_printk(fmt, ...)                                       \
     ({                                                             \
         char ____fmt[] = fmt;                                      \
         bpf_trace_printk(____fmt, sizeof(____fmt), ##__VA_ARGS__); \
     })
 
-struct saddr_key {
+struct daddr_key {
     __u32 prefix_len;
     __u8 data[4];
 };
@@ -49,7 +42,7 @@ struct {
     __type(value, int);
     __uint(max_entries, 1);
     __uint(pinning, LIBBPF_PIN_BY_NAME);
-} ingress_any SEC(".maps");
+} egress_any SEC(".maps");
 
 struct {
     __uint(type, BPF_MAP_TYPE_LPM_TRIE);
@@ -58,7 +51,31 @@ struct {
     __uint(max_entries, MAX_ADDRESSES);
     __uint(map_flags, BPF_F_NO_PREALLOC);
     __uint(pinning, LIBBPF_PIN_BY_NAME);
-} src_address SEC(".maps");
+} dst_address SEC(".maps");
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} egress_src_port SEC(".maps");
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} egress_dst_port SEC(".maps");
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} egress_proto SEC(".maps");
 
 struct {
     __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
@@ -66,44 +83,20 @@ struct {
     __type(value, u32);
     __uint(max_entries, 1);
     __uint(pinning, LIBBPF_PIN_BY_NAME);
-} mirroring_ingress_jmp_table SEC(".maps");
-
-struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, u32);
-    __type(value, u32);
-    __uint(max_entries, MAX_ADDRESSES);
-    __uint(pinning, LIBBPF_PIN_BY_NAME);
-} ingress_src_port SEC(".maps");
-
-struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, u32);
-    __type(value, u32);
-    __uint(max_entries, MAX_ADDRESSES);
-    __uint(pinning, LIBBPF_PIN_BY_NAME);
-} ingress_dst_port SEC(".maps");
-
-struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, u32);
-    __type(value, u32);
-    __uint(max_entries, MAX_ADDRESSES);
-    __uint(pinning, LIBBPF_PIN_BY_NAME);
-} ingress_proto SEC(".maps");
+} mirroring_egress_jmp_table SEC(".maps");
 
 /* Notice this section name is used when attaching TC filter
  *
  * Like:
  *  $TC qdisc   add dev $DEV clsact
- *  $TC filter  add dev $DEV ingress bpf da obj $BPF_OBJ sec ingress_redirect
- *  $TC filter show dev $DEV ingress
- *  $TC filter  del dev $DEV ingress
+ *  $TC filter  add dev $DEV egress bpf da obj $BPF_OBJ sec egress_redirect
+ *  $TC filter show dev $DEV egress
+ *  $TC filter  del dev $DEV egress
  *
  * Does TC redirect respect IP-forward settings?
  *
  */
-static __always_inline int ingress_redirect(struct __sk_buff *skb)
+static __always_inline int egress_redirect(struct __sk_buff *skb)
 {
     bool src_addr_match = false;
     bool proto_match = false;
@@ -120,8 +113,9 @@ static __always_inline int ingress_redirect(struct __sk_buff *skb)
 
     /* Lookup what ifindex to redirect packets to */
     ifindex = bpf_map_lookup_elem(&redirect_iface, &iface_key);
-    if (!ifindex)
+    if (!ifindex) {
         return TC_ACT_OK;
+    }
 
     void *data = (void *)(long)skb->data;
     void *data_end = (void *)(long)skb->data_end;
@@ -135,9 +129,9 @@ static __always_inline int ingress_redirect(struct __sk_buff *skb)
     if (data + sizeof(*eth) > data_end) {
         return TC_ACT_OK;
     }
-    if (eth->h_proto != htons(ETH_P_IP)) {
+    if (eth->h_proto != bpf_htons(ETH_P_IP)) {
         return TC_ACT_OK; // Not an IPv4 packet, handover to kernel
-    } else if (eth->h_proto == htons(ETH_P_ARP)) {
+    } else if (eth->h_proto == bpf_htons(ETH_P_ARP)) {
         return TC_ACT_OK;
     }
 
@@ -165,20 +159,20 @@ static __always_inline int ingress_redirect(struct __sk_buff *skb)
     uint32_t fin_srcport = 0;
     uint32_t fin_dstport = 0;
 
-    __u32 saddr = iph->saddr;
+    __u32 daddr = iph->daddr;
 
-    struct saddr_key skey;
-    skey.prefix_len = 32;
-    skey.data[0] = saddr & 0xff;
-    skey.data[1] = (saddr >> 8) & 0xff;
-    skey.data[2] = (saddr >> 16) & 0xff;
-    skey.data[3] = (saddr >> 24) & 0xff;
+    struct daddr_key dkey;
+    dkey.prefix_len = 32;
+    dkey.data[0] = daddr & 0xff;
+    dkey.data[1] = (daddr >> 8) & 0xff;
+    dkey.data[2] = (daddr >> 16) & 0xff;
+    dkey.data[3] = (daddr >> 24) & 0xff;
 
     // Binary representation of ifany variable. Reading from LSB to MSB:
     //      0th bit True: allow all/any IP addresses
     //      1th bit True: allow all/any source port
     //      2th bit True: allow all/any destination port
-    ifany = bpf_map_lookup_elem(&ingress_any, &iface_key);
+    ifany = bpf_map_lookup_elem(&egress_any, &iface_key);
     if (ifany) {
         if (((*ifany) >> (0)) & 1) {
             allow_all_ip = true;
@@ -192,23 +186,22 @@ static __always_inline int ingress_redirect(struct __sk_buff *skb)
     }
 
     /* Check if the packet's destination ip falls in the remote endpoint CIDR */
-    if (allow_all_ip == true || bpf_map_lookup_elem(&src_address, &skey)) {
+    if (allow_all_ip == true || bpf_map_lookup_elem(&dst_address, &dkey)) {
         uint32_t protocol = iph->protocol;
         // 1 = ICMP
         // 6 = TCP
         // 17 = UDP
-        if (bpf_map_lookup_elem(&ingress_proto, &protocol)) {
-            if (iph->protocol ==
-                IPPROTO_ICMP) { // for ICMP, src and dest ports do not matter
+        if (bpf_map_lookup_elem(&egress_proto, &protocol)) {
+            if (iph->protocol == IPPROTO_ICMP) {
                 return bpf_clone_redirect(skb, *ifindex, 0);
             } else if (iph->protocol == IPPROTO_UDP) {
                 struct udphdr *udph = (struct udphdr *)(data + l4_off);
-                fin_srcport = ntohs(udph->source);
-                fin_dstport = ntohs(udph->dest);
+                fin_srcport = bpf_ntohs(udph->source);
+                fin_dstport = bpf_ntohs(udph->dest);
             } else if (iph->protocol == IPPROTO_TCP) {
                 struct tcphdr *tcph = (struct tcphdr *)(data + l4_off);
-                fin_srcport = ntohs(tcph->source);
-                fin_dstport = ntohs(tcph->dest);
+                fin_srcport = bpf_ntohs(tcph->source);
+                fin_dstport = bpf_ntohs(tcph->dest);
             } else {
                 return TC_ACT_OK;
             }
@@ -217,19 +210,18 @@ static __always_inline int ingress_redirect(struct __sk_buff *skb)
                 return bpf_clone_redirect(skb, *ifindex, 0); // __bpf_rx_skb
             } else if (allow_all_src_ports == true &&
                        allow_all_dst_ports == false) {
-                if (bpf_map_lookup_elem(&ingress_dst_port, &fin_dstport)) {
-                    int temp = bpf_clone_redirect(skb, *ifindex, 0);
-                    return temp; // __bpf_rx_skb
+                if (bpf_map_lookup_elem(&egress_dst_port, &fin_dstport)) {
+                    return bpf_clone_redirect(skb, *ifindex, 0); // __bpf_rx_skb
                 }
             } else if (allow_all_src_ports == false &&
                        allow_all_dst_ports == true) {
-                if (bpf_map_lookup_elem(&ingress_src_port, &fin_srcport)) {
+                if (bpf_map_lookup_elem(&egress_src_port, &fin_srcport)) {
                     return bpf_clone_redirect(skb, *ifindex, 0); // __bpf_rx_skb
                 }
             } else if (allow_all_src_ports == false &&
                        allow_all_dst_ports == false) {
-                if (bpf_map_lookup_elem(&ingress_src_port, &fin_srcport) &&
-                    bpf_map_lookup_elem(&ingress_dst_port, &fin_dstport)) {
+                if (bpf_map_lookup_elem(&egress_src_port, &fin_srcport) &&
+                    bpf_map_lookup_elem(&egress_dst_port, &fin_dstport)) {
                     return bpf_clone_redirect(skb, *ifindex, 0); // __bpf_rx_skb
                 }
             }
@@ -238,15 +230,15 @@ static __always_inline int ingress_redirect(struct __sk_buff *skb)
     return TC_ACT_OK;
 }
 
-SEC("tc_ingress_redirect")
-int _ingress_redirect(struct __sk_buff *skb)
+SEC("tc_egress_redirect")
+int _egress_redirect(struct __sk_buff *skb)
 {
     int ret;
-    ret = ingress_redirect(skb);
+    ret = egress_redirect(skb);
     if (ret != TC_ACT_OK) {
         return ret;
     }
-    bpf_tail_call(skb, &mirroring_ingress_jmp_table, 0);
+    bpf_tail_call(skb, &mirroring_egress_jmp_table, 0);
     return TC_ACT_OK;
 }
 

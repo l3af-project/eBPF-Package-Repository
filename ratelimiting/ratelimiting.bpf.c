@@ -3,8 +3,9 @@
 
 /* Ratelimit incoming TCP connections using XDP */
 
+
 #define KBUILD_MODNAME "foo"
-#include "vmlinux.h"
+#include "../headers/vmlinux.h"
 #include "bpf_helpers.h"
 #include "bpf_endian.h"
 
