@@ -31,14 +31,14 @@ set_property(TARGET xdp_root PROPERTY VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/pack
 # eBPF program configuration
 #
 
-add_custom_target(xdp_root_kern ALL
-                  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/build/xdp_root_kern.o)
+add_custom_target(xdp_root.bpf ALL
+                  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/build/xdp_root.bpf.o)
 set(CFLAGS_KERN -g -target bpf -Wall -O2 $(ClangIncludes))
-set_property(TARGET xdp_root_kern PROPERTY VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/eBPF-for-Windows/build/native/ebpf-for-windows.props)
+set_property(TARGET xdp_root.bpf PROPERTY VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/eBPF-for-Windows/build/native/ebpf-for-windows.props)
 
 # We use custom commands here so that the same command will be used on
 # Linux and Windows (where cmake would normally use cl instead of clang).
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/build/xdp_root_kern.o
-                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/xdp_root_kern.c
-                   COMMAND clang ${CFLAGS_KERN} -c ${L3AF_SRC_PATH}/xdp_root_kern.c -o ${L3AF_SRC_PATH}/build/xdp_root_kern.o)
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/build/xdp_root.bpf.o
+                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/xdp_root.bpf.c
+                   COMMAND clang ${CFLAGS_KERN} -c ${L3AF_SRC_PATH}/xdp_root.bpf.c -o ${L3AF_SRC_PATH}/build/xdp_root.bpf.o)
