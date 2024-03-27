@@ -31,6 +31,18 @@ typedef struct flow_record_ {
     u16 counter;                    /* flow_idle_counter */
 } flow_record_t;
 
+void *memset(void *b, int c, unsigned long len)
+{
+  if (b == NULL || len <= 0)
+      return b;
+  unsigned char *ptr = b;
+   while(*ptr != '\0' && len--)
+    {
+      *ptr++ = (unsigned char)c;
+    }
+  return(b);
+}
+
 #define flow_key_hash_mask 0x000fffff
 
 #endif
