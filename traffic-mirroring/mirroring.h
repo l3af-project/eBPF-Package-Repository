@@ -86,4 +86,7 @@ int nl_update_route(struct route_config r, int c);
 bool validate_netlink(struct route_config *r);
 bool validate_str(const char* input);
 bool validate_map_name(char *path);
+void closeFd(int fd);
+void cleanup(void);
+void close_logfile(void);
 #endif

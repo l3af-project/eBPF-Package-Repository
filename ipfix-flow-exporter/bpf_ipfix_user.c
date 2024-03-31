@@ -392,3 +392,11 @@ int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file)
     }
     return 0;
 }
+
+/* Close a file fd */
+void close_fd(int fd){
+  if(fd >= 0){
+     close(fd);
+  }
+  return;
+}
