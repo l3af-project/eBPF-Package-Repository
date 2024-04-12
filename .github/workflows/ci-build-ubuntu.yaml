@@ -87,7 +87,7 @@ jobs:
       - name: Build eBPF Program and Upload artifacts
         run: |
           #!/usr/bin/env bash
-          progs=("xdp-root" "ratelimiting" "connection-limit" "tc-root" "ipfix-flow-exporter" "traffic-mirroring")
+          declare -a progs=( "xdp-root" "ratelimiting" "connection-limit" "tc-root" "ipfix-flow-exporter" "traffic-mirroring" )
           for prog in "${progs[@]}"
           do
             cd "$LINUX_SRC_PATH/$BPF_PATH/$REPO/$prog"
