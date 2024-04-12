@@ -12,10 +12,20 @@ jobs:
       image: ubuntu:focal
 
     steps:
+      - name: Set env variables
+        run: |
+          echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
+          echo "PROG=xdp-root" >> $GITHUB_ENV
+          echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
+          echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
+          echo "DEBIAN_FRONTEND=noninteractive" >> $GITHUB_ENV
+          echo "TZ=Etc/UTC" >> $GITHUB_ENV
+
       - name: Set up build environment
         run: |
           apt-get update
           apt-get install -y bc \
+          tzdata \
           bison \
           build-essential \
           clang \
@@ -43,14 +53,6 @@ jobs:
           libelf1 \
           pkg-config
 
-      - name: Set env variables
-        run: |
-          echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
-          echo "PROG=xdp-root" >> $GITHUB_ENV
-          echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
-          echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
-          echo "DEBIAN_FRONTEND=noninteractive" >> $GITHUB_ENV
-          echo "TZ=Etc/UTC" >> $GITHUB_ENV
 
       - name: Clone dependencies
         run: |
