@@ -9,11 +9,12 @@ jobs:
   xdp-root-build-ubuntu:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:jammy
+      image: ubuntu:focal
 
     steps:
       - name: Set env variables
         run: |
+          uname -r
           echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
           echo "PROG=xdp-root" >> $GITHUB_ENV
           echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
