@@ -10,7 +10,7 @@ LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += xdp_root.bpf.o
+always-y += xdp_root.bpf.o xdp_root_kern.o
 
 ifeq ($(ARCH), arm)
 # Strip all except -D__LINUX_ARM_ARCH__ option needed to handle linux
@@ -101,6 +101,7 @@ tar.zip:
 	@rm -f l3af_xdp_root.tar.gz
 	@mkdir l3af_xdp_root
 	@cp $(L3AF_SRC_PATH)/xdp_root.bpf.o l3af_xdp_root/
+	@cp $(L3AF_SRC_PATH)/xdp_root_kern.o l3af_xdp_root/
 	@tar -cvf l3af_xdp_root.tar ./l3af_xdp_root
 	@gzip l3af_xdp_root.tar
 
@@ -191,7 +192,7 @@ $(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/x
 # with native target, e.g., x64, arm64, etc. 'opt' does bpf CORE IR builtin
 # processing (llvm12) and IR optimizations. 'llvm-dis' converts
 # 'opt' output to IR, and finally 'llc' generates bpf byte code.
-$(obj)/%.o: $(src)/%.c
+$(obj)/xdp_root.bpf.o: $(src)/xdp_root.bpf.c
 	@echo "  CLANG-bpf " $@
 	$(Q)$(CLANG) $(NOSTDINC_FLAGS) $(BPF_EXTRA_CFLAGS) \
 		-I$(obj) -I$(srctree)/tools/testing/selftests/bpf/ \
@@ -203,6 +204,22 @@ $(obj)/%.o: $(src)/%.c
                 -Wno-unknown-warning-option $(CLANG_ARCH_ARGS) \
                 -fno-asynchronous-unwind-tables \
                 -I$(srctree)/samples/bpf/ \
+                -O2 -emit-llvm -Xclang -disable-llvm-passes -c $< -o - | \
+                $(OPT) -O2 -mtriple=bpf-pc-linux | $(LLVM_DIS) | \
+                $(LLC) -march=bpf $(LLC_FLAGS) -filetype=obj -o $@
+
+$(obj)/xdp_root_kern.o: $(src)/xdp_root_kern.c
+	@echo "  CLANG-bpf " $@
+	$(Q)$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(BPF_EXTRA_CFLAGS) \
+		-I$(obj) -I$(srctree)/tools/testing/selftests/bpf/ \
+		-I$(srctree)/tools/lib/ -I$(srctree)/tools/lib/bpf \
+		-D__KERNEL__ -D__BPF_TRACING__ -Wno-unused-value -Wno-pointer-sign \
+		-D__TARGET_ARCH_$(SRCARCH) -Wno-compare-distinct-pointer-types \
+		-Wno-gnu-variable-sized-type-not-at-end \
+		-Wno-address-of-packed-member -Wno-tautological-compare \
+                -Wno-unknown-warning-option $(CLANG_ARCH_ARGS) \
+                -fno-asynchronous-unwind-tables \
+                -I$(srctree)/samples/bpf/ -include asm_goto_workaround.h \
                 -O2 -emit-llvm -Xclang -disable-llvm-passes -c $< -o - | \
                 $(OPT) -O2 -mtriple=bpf-pc-linux | $(LLVM_DIS) | \
                 $(LLC) -march=bpf $(LLC_FLAGS) -filetype=obj -o $@
