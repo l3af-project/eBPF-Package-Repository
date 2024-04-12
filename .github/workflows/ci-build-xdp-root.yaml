@@ -49,6 +49,8 @@ jobs:
           echo "PROG=xdp-root" >> $GITHUB_ENV
           echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
           echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
+          echo "DEBIAN_FRONTEND=noninteractive" >> $GITHUB_ENV
+          echo "TZ=Etc/UTC" >> $GITHUB_ENV
 
       - name: Clone dependencies
         run: |
