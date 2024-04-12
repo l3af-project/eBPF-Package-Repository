@@ -58,7 +58,7 @@ jobs:
           echo "CONFIG_DEBUG_INFO_BTF=y" >> .config
           make oldconfig
           make prepare
-          make -j$(nproc)
+          yes | make -j$(nproc)
           make headers_install
 
       - name: Clone kernel function repository
