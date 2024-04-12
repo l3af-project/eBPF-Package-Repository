@@ -38,7 +38,9 @@ jobs:
           linux-tools-generic \
           llvm \
           rsync \
-          dwarves
+          dwarves \
+          zlib1g  \
+          libelf1
 
       - name: Set env variables
         run: |
@@ -46,15 +48,6 @@ jobs:
           echo "PROG=xdp-root" >> $GITHUB_ENV
           echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
           echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
-
-      - name: Install bpftool
-        run: |
-          git clone --branch v6.7.0 --recursive --depth 1 https://github.com/libbpf/bpftool
-          cd bpftool/src
-          yes | make
-          cp bpftool /usr/local/bin/
-          cd ../../
-          rm -rf bpftool
 
       - name: Clone dependencies
         run: |
@@ -69,6 +62,15 @@ jobs:
           make prepare
           yes | make -j$(nproc)
           make headers_install
+
+      - name: Install bpftool
+        run: |
+          git clone --recurse-submodules https://github.com/libbpf/bpftool.git
+          cd bpftool/src
+          yes | make
+          cp bpftool /usr/local/bin/
+          cd ../../
+          rm -rf bpftool
 
       - name: Clone kernel function repository
         uses: actions/checkout@v2
