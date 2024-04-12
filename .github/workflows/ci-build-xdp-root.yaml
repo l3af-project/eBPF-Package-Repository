@@ -40,7 +40,8 @@ jobs:
           rsync \
           dwarves \
           zlib1g  \
-          libelf1
+          libelf1 \
+          pkg-config
 
       - name: Set env variables
         run: |
