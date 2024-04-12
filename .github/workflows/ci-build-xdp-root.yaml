@@ -9,7 +9,7 @@ jobs:
   xdp-root-build-ubuntu:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:focal
+      image: ubuntu:jammy
 
     steps:
       - name: Set env variables
@@ -69,7 +69,7 @@ jobs:
 
       - name: Install bpftool
         run: |
-          git clone --branch v6.7.0 --recursive --depth 1 https://github.com/libbpf/bpftool
+          git clone --recurse-submodules https://github.com/libbpf/bpftool.git
           cd bpftool/src
           make
           cp bpftool /usr/local/bin/
