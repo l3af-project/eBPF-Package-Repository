@@ -61,6 +61,7 @@ jobs:
                           extra_paholeopt="${extra_paholeopt} --skip_encoding_btf_enum64"\
                   fi' scripts/link-vmlinux.sh
           echo "CONFIG_DEBUG_INFO_BTF=y" >> .config
+          echo "CONFIG_MODULES=y" >> .config
           make oldconfig
           make prepare
           yes | make -j$(nproc)
