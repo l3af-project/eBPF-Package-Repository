@@ -86,13 +86,7 @@ jobs:
 
       - name: Build eBPF Program and Upload artifacts
         run: |
-          #!/bin/bash
-          declare -a progs=( "xdp-root" "ratelimiting" "connection-limit" "tc-root" "ipfix-flow-exporter" "traffic-mirroring" )
-          for prog in "${progs[@]}"
-          do
-            cd "$LINUX_SRC_PATH/$BPF_PATH/$REPO/$prog"
-            make
-          done
+          bash buildscript.sh
 
       - name: Upload xdp-root
         uses: actions/upload-artifact@v3
