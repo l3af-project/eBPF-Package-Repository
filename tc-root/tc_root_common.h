@@ -6,8 +6,8 @@
 #define _TC_ROOT_COMMON_STRUCTS_H
 
 #include "../headers/vmlinux.h"
-#include "bpf_endian.h"
-#include "bpf_helpers.h"
+#include "bpf/bpf_endian.h"
+#include "bpf/bpf_helpers.h"
 
 #define ROOT_ARRAY_SIZE 1
 #define PIN_GLOBAL_NS 2

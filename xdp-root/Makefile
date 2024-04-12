@@ -176,7 +176,7 @@ endef
 CLANG_SYS_INCLUDES = $(call get_sys_includes,$(CLANG))
 
 
-$(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/xdp_sample_shared.h
+$(obj)/%.bpf.o: $(src)/%.bpf.c $(BPF_SAMPLES_PATH)/xdp_sample.bpf.h $(BPF_SAMPLES_PATH)/xdp_sample_shared.h
 	@echo "  CLANG-BPF " $@
 	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(SRCARCH) \
 		-Wno-compare-distinct-pointer-types -I$(srctree)/include \
@@ -192,23 +192,8 @@ $(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/x
 # with native target, e.g., x64, arm64, etc. 'opt' does bpf CORE IR builtin
 # processing (llvm12) and IR optimizations. 'llvm-dis' converts
 # 'opt' output to IR, and finally 'llc' generates bpf byte code.
-$(obj)/xdp_root.bpf.o: $(src)/xdp_root.bpf.c
-	@echo "  CLANG-bpf " $@
-	$(Q)$(CLANG) $(NOSTDINC_FLAGS) $(BPF_EXTRA_CFLAGS) \
-		-I$(obj) -I$(srctree)/tools/testing/selftests/bpf/ \
-		-I$(srctree)/tools/lib/ -I$(srctree)/tools/lib/bpf \
-		-D__KERNEL__ -D__BPF_TRACING__ -Wno-unused-value -Wno-pointer-sign \
-		-D__TARGET_ARCH_$(SRCARCH) -Wno-compare-distinct-pointer-types \
-		-Wno-gnu-variable-sized-type-not-at-end \
-		-Wno-address-of-packed-member -Wno-tautological-compare \
-                -Wno-unknown-warning-option $(CLANG_ARCH_ARGS) \
-                -fno-asynchronous-unwind-tables \
-                -I$(srctree)/samples/bpf/ \
-                -O2 -emit-llvm -Xclang -disable-llvm-passes -c $< -o - | \
-                $(OPT) -O2 -mtriple=bpf-pc-linux | $(LLVM_DIS) | \
-                $(LLC) -march=bpf $(LLC_FLAGS) -filetype=obj -o $@
 
-$(obj)/xdp_root_kern.o: $(src)/xdp_root_kern.c
+$(obj)/%.o: $(src)/%.c
 	@echo "  CLANG-bpf " $@
 	$(Q)$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(BPF_EXTRA_CFLAGS) \
 		-I$(obj) -I$(srctree)/tools/testing/selftests/bpf/ \

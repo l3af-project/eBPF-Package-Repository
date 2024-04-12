@@ -21,17 +21,26 @@ jobs:
       image: ubuntu:focal
 
     steps:
+      - name: Set env variables
+        run: |
+          echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
+          echo "PROG=traffic-mirroring" >> $GITHUB_ENV
+          echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
+          echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
+          echo "DEBIAN_FRONTEND=noninteractive" >> $GITHUB_ENV
+          echo "TZ=Etc/UTC" >> $GITHUB_ENV
+
       - name: Set up build environment
         run: |
           apt-get update
           apt-get install -y bc \
+          tzdata \
           bison \
           build-essential \
           clang \
           curl \
           exuberant-ctags \
           flex \
-          gcc-8 \
           gcc-multilib \
           git \
           gnutls-bin \
@@ -46,27 +55,45 @@ jobs:
           linux-tools-common \
           linux-tools-generic \
           llvm \
-          rsync
+          rsync \
+          dwarves \
+          zlib1g  \
+          libelf1 \
+          pkg-config 
 
-      - name: Set env variables
-        run: |
-          echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
-          echo "PROG=traffic-mirroring" >> $GITHUB_ENV
-          echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
-          echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
-      
-      - name: Clone dependencies 
+      - name: Clone dependencies
         run: |
           git clone --branch v5.15 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
           cd $LINUX_SRC_PATH
-          make defconfig
+          sed -i '229a\
+                  if [ "${pahole_ver}" -ge "124" ]; then\
+                          extra_paholeopt="${extra_paholeopt} --skip_encoding_btf_enum64"\
+                  fi' scripts/link-vmlinux.sh
+          echo "CONFIG_DEBUG_INFO_BTF=y" >> .config
+          echo "CONFIG_MODULES=y" >> .config
+          make oldconfig
           make prepare
+          yes | make -j$(nproc)
           make headers_install
+
+      - name: Install bpftool
+        run: |
+          git clone --branch v7.2.0 --recurse-submodules https://github.com/libbpf/bpftool.git
+          cd bpftool/src
+          make
+          cp bpftool /usr/local/bin/
+          cd ../../
+          rm -rf bpftool
           
       - name: Clone kernel function repository
         uses: actions/checkout@v2
         with:
           path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
+
+      - name: Generate vmlinux.h
+        run: |     
+          mkdir -p $LINUX_SRC_PATH/$BPF_PATH/$REPO/headers 
+          bpftool btf dump file /sys/kernel/btf/vmlinux format c > $LINUX_SRC_PATH/$BPF_PATH/$REPO/headers/vmlinux.h
 
       - name: Build eBPF Programs
         run: |
