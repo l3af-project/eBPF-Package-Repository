@@ -46,7 +46,7 @@ jobs:
           linux-headers-generic \
           linux-tools-common \
           linux-tools-generic \
-          llvm-14 \
+          llvm-12 \
           rsync \
           dwarves \
           zlib1g  \
