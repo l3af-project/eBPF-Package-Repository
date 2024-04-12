@@ -32,7 +32,6 @@ jobs:
           curl \
           exuberant-ctags \
           flex \
-          gcc-8 \
           gcc-multilib \
           git \
           gnutls-bin \
