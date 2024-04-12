@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  connection-limit-build-ubuntu:
+  eBPF-Programs-Build:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:focal
@@ -87,10 +87,10 @@ jobs:
       - name: Build eBPF Program and Upload artifacts
         run: |
           #!/usr/bin/env bash
-          declare -a progs=("xdp-root" "ratelimiting" "connection-limit" "tc-root" "ipfix-flow-exporter" "traffic-mirroring")
+          progs=("xdp-root" "ratelimiting" "connection-limit" "tc-root" "ipfix-flow-exporter" "traffic-mirroring")
           for prog in "${progs[@]}"
           do
-            cd $LINUX_SRC_PATH/$BPF_PATH/$REPO/$prog
+            cd "$LINUX_SRC_PATH/$BPF_PATH/$REPO/$prog"
             make
           done
 

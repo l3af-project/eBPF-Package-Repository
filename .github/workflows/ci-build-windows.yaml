@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  xdp-root-build-windows:
+  eBPF-Programs-Build:
     strategy:
       matrix:
         configurations: ['Debug', 'Release']
