@@ -52,8 +52,8 @@ jobs:
           zlib1g  \
           libelf1 \
           pkg-config \
-          linux-tools-$(uname -r)-azure \
-          linux-cloud-tools-$(uname -r)-azure \
+          linux-tools-$(uname -r) \
+          linux-cloud-tools-$(uname -r) \
           linux-tools-azure \
           linux-cloud-tools-azure 
 
