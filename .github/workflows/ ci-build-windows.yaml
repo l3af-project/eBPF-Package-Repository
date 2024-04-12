@@ -37,7 +37,8 @@ jobs:
  
       - name: Create artifact directory
         run: |
-          mkdir upload_artifact_xdp_root upload_artifact_ratelimiting
+          mkdir upload_artifact_xdp_root
+          mkdir upload_artifact_ratelimiting
           copy D:\a\eBPF-Package-Repository\eBPF-Package-Repository\xdp-root\build\xdp_root_kern.o upload_artifact_xdp_root
           copy D:\a\eBPF-Package-Repository\eBPF-Package-Repository\build\xdp-root\${{env.BUILD_CONFIGURATION}}\xdp_root.exe upload_artifact_xdp_root
           copy D:\a\eBPF-Package-Repository\eBPF-Package-Repository\ratelimiting\build\ratelimiting_kern.o upload_artifact_ratelimiting
