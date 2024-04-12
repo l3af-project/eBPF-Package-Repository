@@ -70,7 +70,7 @@ jobs:
 
       - name: Install bpftool
         run: |
-          git clone --recurse-submodules https://github.com/libbpf/bpftool.git
+          git clone --branch v7.2.0 --recurse-submodules https://github.com/libbpf/bpftool.git
           cd bpftool/src
           make
           cp bpftool /usr/local/bin/
