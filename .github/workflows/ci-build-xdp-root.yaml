@@ -51,11 +51,7 @@ jobs:
           dwarves \
           zlib1g  \
           libelf1 \
-          pkg-config \
-          linux-tools-$(uname -r) \
-          linux-cloud-tools-$(uname -r) \
-          linux-tools-azure \
-          linux-cloud-tools-azure 
+          pkg-config 
 
       - name: Clone dependencies
         run: |
@@ -70,6 +66,15 @@ jobs:
           make prepare
           yes | make -j$(nproc)
           make headers_install
+
+      - name: Install bpftool
+        run: |
+          git clone --branch v6.7.0 --recursive --depth 1 https://github.com/libbpf/bpftool
+          cd bpftool/src
+          make
+          cp bpftool /usr/local/bin/
+          cd ../../
+          rm -rf bpftool
 
       - name: Clone kernel function repository
         uses: actions/checkout@v2
