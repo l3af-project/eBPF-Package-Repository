@@ -37,7 +37,8 @@ jobs:
           linux-tools-common \
           linux-tools-generic \
           llvm \
-          rsync
+          rsync \
+          dwarves
 
       - name: Set env variables
         run: |
