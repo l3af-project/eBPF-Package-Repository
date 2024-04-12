@@ -46,7 +46,7 @@ jobs:
           linux-headers-generic \
           linux-tools-common \
           linux-tools-generic \
-          llvm-12 \
+          llvm \
           rsync \
           dwarves \
           zlib1g  \
@@ -67,15 +67,6 @@ jobs:
           make prepare
           yes | make -j$(nproc)
           make headers_install
-
-      - name: Install bpftool
-        run: |
-          git clone --recurse-submodules https://github.com/libbpf/bpftool.git
-          cd bpftool/src
-          yes | make
-          cp bpftool /usr/local/bin/
-          cd ../../
-          rm -rf bpftool
 
       - name: Clone kernel function repository
         uses: actions/checkout@v2
