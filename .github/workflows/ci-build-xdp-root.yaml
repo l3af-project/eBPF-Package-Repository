@@ -47,6 +47,15 @@ jobs:
           echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
           echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
 
+      - name: Install bpftool
+        run: |
+          git clone --recursive --depth 1 https://github.com/libbpf/bpftool
+          cd bpftool/src
+          yes | make
+          cp bpftool /usr/local/bin/
+          cd ../../
+          rm -rf bpftool
+
       - name: Clone dependencies
         run: |
           git clone --branch v5.15 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
@@ -65,16 +74,10 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
-
-      - name: Install bpftool and generate vmlinux.h
-        run: |
-          git clone --recursive --depth 1 https://github.com/libbpf/bpftool
-          cd bpftool/src
-          make
-          cp bpftool /usr/local/bin/
-          cd ../../
-          rm -rf bpftool
-          bpftool btf dump file /sys/kernel/btf/vmlinux format c > headers/vmlinux.h
+      
+      - name: Generate vmlinux.h
+        run: |      
+          bpftool btf dump file /sys/kernel/btf/vmlinux format c > $LINUX_SRC_PATH/$BPF_PATH/$REPO/headers/vmlinux.h
 
       - name: Build eBPF Programs
         run: |
