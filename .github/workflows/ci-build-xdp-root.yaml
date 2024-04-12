@@ -49,7 +49,7 @@ jobs:
 
       - name: Install bpftool
         run: |
-          git clone --recursive --depth 1 https://github.com/libbpf/bpftool
+          git clone --branch v6.7.0 --recursive --depth 1 https://github.com/libbpf/bpftool
           cd bpftool/src
           yes | make
           cp bpftool /usr/local/bin/
