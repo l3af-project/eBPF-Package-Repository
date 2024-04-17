@@ -17,11 +17,18 @@ static const char *__doc__=" BPF IPFIX : To get packet flow data by handling the
 char *ingress_log_file_path = "/var/log/l3af/ingress_ipfix.log";
 char if_name[IF_NAMESIZE];
 
+void close_ingress_fds(void) {
+    close_fd(ingress_fd);
+    close_fd(last_ingress_fd);
+    return;
+}
+
 void sig_handler(int signo)
 {
     log_info("Received shutdown signal, cleaning up");
     flow_record_poll(ingress_fd, last_ingress_fd, INGRESS);
     close_logfile();
+    close_ingress_fds();
     exit(EXIT_SUCCESS);
 }
 
@@ -35,7 +42,6 @@ int populate_ingress_fds(void) {
     ingress_fd = bpf_obj_get(map_file);
     if (ingress_fd < 0) {
         fprintf(stderr, "ERROR: cannot open bpf_obj_get(%s)", ingress_bpf_map);
-        close_logfile();
         return EXIT_FAILURE;
     }
 
@@ -46,11 +52,12 @@ int populate_ingress_fds(void) {
     last_ingress_fd = bpf_obj_get(map_file);
     if (last_ingress_fd < 0) {
         fprintf(stderr, "ERROR: cannot open bpf_obj_get(%s)", last_ingress_bpf_map);
-        close_logfile();
         return EXIT_FAILURE;
     }
     return 0;
 }
+
+
 
 int main(int argc, char **argv)
 {
@@ -113,17 +120,21 @@ int main(int argc, char **argv)
     if (populate_ingress_fds() == EXIT_FAILURE) {
         fprintf(stderr, "ERR: Fetching TC INGRESS maps failed\n");
         close_logfile();
+        close_ingress_fds();
         return EXIT_FAILURE;
     }
     if (remote_ip == NULL) {
         log_info("Remote IP is not configured by user, Please provide the remote_ip");
         close_logfile();
+        close_ingress_fds();
         return EXIT_FAILURE;
     }
 
     if (signal(SIGINT, sig_handler) || signal(SIGHUP, sig_handler) ||
         signal(SIGTERM, sig_handler)) {
         perror("signal");
+        close_logfile();
+        close_ingress_fds();
         return EXIT_FAIL;
     }
 
@@ -132,5 +143,7 @@ int main(int argc, char **argv)
         sleep(10);
         flow_record_poll(ingress_fd, last_ingress_fd, INGRESS);
     }
+    close_logfile();
+    close_ingress_fds();
     return EXIT_OK;
 }

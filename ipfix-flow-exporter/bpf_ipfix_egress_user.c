@@ -17,12 +17,19 @@ static const char *__doc__=" BPF IPFIX : To get packet flow data by handling the
 char if_name[IF_NAMESIZE];
 char *egress_log_file_path = "/var/log/l3af/egress_ipfix.log";
 
+void close_egress_fds(void) {
+    close_fd(egress_fd);
+    close_fd(last_egress_fd);
+    return;
+}
+
 void sig_handler(int signo)
 {
     log_info("Received shutdown signal, cleaning up");
     flow_record_poll(egress_fd, last_egress_fd, EGRESS);
     log_info("Cleaned up");
     close_logfile();
+    close_egress_fds();
     exit(EXIT_SUCCESS);
 }
 
@@ -37,7 +44,6 @@ int populate_egress_fds(void) {
     if (egress_fd < 0) {
         fprintf(stderr, "ERROR: cannot open bpf_obj_get(%s)",
                         egress_bpf_map);
-        close_logfile();
         return EXIT_FAILURE;
     }
 
@@ -48,11 +54,11 @@ int populate_egress_fds(void) {
     last_egress_fd = bpf_obj_get(map_file);
     if (last_egress_fd < 0) {
         fprintf(stderr, "ERROR: cannot open bpf_obj_get(%s)", last_egress_bpf_map);
-        close_logfile();
         return EXIT_FAILURE;
     }
     return 0;
 }
+
 
 int main(int argc, char **argv)
 {
@@ -113,11 +119,13 @@ int main(int argc, char **argv)
     if (populate_egress_fds() == EXIT_FAILURE) {
         fprintf(stderr, "ERR: Fetching TC EGRESS maps failed\n");
         close_logfile();
+        close_egress_fds();
         return EXIT_FAILURE;
     }
     if (remote_ip == NULL) {
         log_err("Remote IP is not configured by user, Please provide the remote ip");
         close_logfile();
+        close_egress_fds();
         return EXIT_FAILURE;
     }
 
@@ -125,6 +133,8 @@ int main(int argc, char **argv)
         signal(SIGHUP, sig_handler) ||
         signal(SIGTERM, sig_handler)) {
         perror("signal");
+        close_logfile();
+        close_egress_fds();
         return EXIT_FAIL;
     }
 
@@ -133,5 +143,7 @@ int main(int argc, char **argv)
         sleep(10);
         flow_record_poll(egress_fd, last_egress_fd, EGRESS);
     }
+    close_logfile();
+    close_egress_fds();
     return EXIT_OK;
 }

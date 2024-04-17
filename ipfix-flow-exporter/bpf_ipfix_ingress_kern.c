@@ -16,7 +16,6 @@
 
 #include "bpf_helpers.h"
 #include "bpf_ipfix_kern_common.h"
-
 #define DEBUG 1
 #define INGRESS 0
 #define ICMP 1
