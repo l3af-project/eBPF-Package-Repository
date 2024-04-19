@@ -710,6 +710,8 @@ int main(int argc, char **argv)
     char map_file[MAP_PATH_SIZE];
 
     memset(ifname, 0, IF_NAMESIZE); /* Can be used uninitialized */
+    fprintf(stdout, "DEFAULT_LOGFILE is %s\n", DEFAULT_LOGFILE);
+    set_log_file();
     /* Parse commands line args */
     while ((opt = getopt_long(argc, argv, "hq", long_options, &longindex)) !=
            -1)
@@ -852,8 +854,6 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
     }
-    fprintf(stdout, "DEFAULT_LOGFILE is %s\n", DEFAULT_LOGFILE);
-    set_log_file();
     bool vn = validate_netlink(&r);
     if (!vn)
     {
