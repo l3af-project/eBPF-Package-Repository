@@ -192,7 +192,7 @@ bool validate_ifname(const char* input_ifname, char *output_ifname)
     for (i = 0; i < len; i++) {
         char c = input_ifname[i];
 
-        if (!(isalpha(c) || isdigit(c)))
+        if (!(isalpha(c) || isdigit(c) || c == '-'))
             return false;
     }
     iface = (void *)input_ifname;
