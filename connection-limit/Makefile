@@ -15,7 +15,7 @@ connection_limit-objs := connection_limit_user.o
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += connection_limit.bpf.o
+always-y += connection_limit.bpf.o connection_limit_kern.o
 
 
 ifeq ($(ARCH), arm)
@@ -107,6 +107,7 @@ tar.zip:
 	@rm -f l3af_connection_limit.tar.gz
 	@mkdir l3af_connection_limit
 	@cp $(L3AF_SRC_PATH)/connection_limit.bpf.o l3af_connection_limit/
+	@cp $(L3AF_SRC_PATH)/connection_limit_kern.o l3af_connection_limit/
 	@cp $(L3AF_SRC_PATH)/connection_limit l3af_connection_limit/
 	@tar -cvf l3af_connection_limit.tar ./l3af_connection_limit
 	@gzip l3af_connection_limit.tar
