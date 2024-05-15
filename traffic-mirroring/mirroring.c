@@ -490,7 +490,7 @@ static bool validate_ifname(const char *input_ifname, char *output_ifname)
     {
         char c = input_ifname[i];
 
-        if (!(isalpha(c) || isdigit(c)))
+        if (!(isalpha(c) || isdigit(c) || c == '-'))
         {
             return false;
         }
