@@ -128,7 +128,8 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
     void *data_end = (void *)(long)skb->data_end;
 
     const int l3_off = ETH_HLEN; // IP header offset
-    const int l4_off = l3_off + sizeof(struct iphdr); // TCP header offset
+    struct iphdr *iph = (struct iphdr *)(data + l3_off);
+    const int l4_off = l3_off + (iph->ihl * 4); // TCP header offset
 
     struct ethhdr *eth = data;
     int l7_off;
@@ -142,10 +143,11 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
         return TC_ACT_OK;
     }
 
-    if (data + l4_off > data_end) {
+    /* Validating IP Header */
+    if ((iph->ihl < 5 || iph->ihl > 15) || 
+        (data + l4_off > data_end)) {
         return TC_ACT_OK; // Not our packet, handover to kernel
     }
-    struct iphdr *iph = (struct iphdr *)(data + l3_off);
 
     if (iph->protocol == IPPROTO_TCP) {
         l7_off = l4_off + sizeof(struct tcphdr); // L7 (e.g. HTTP) header offset
