@@ -226,6 +226,7 @@ void parse_ipv4(struct __sk_buff *skb, u64 l3_offset)
     u16 pckt_size = data_end - data;
 
     struct iphdr *iph = data + l3_offset;
+    u8 ip_hdr_len = (iph->ihl * 4);
 
     if (iph  > data_end)
         return;
@@ -238,13 +239,16 @@ void parse_ipv4(struct __sk_buff *skb, u64 l3_offset)
     u16 control_bit = 0;
     u16 icmp_type = 0;
 
-    if (iph + 1 > data_end)
+    /* Validating IP Header */
+    if ((iph->ihl < 5 || iph->ihl > 15) ||
+        ((u8 *)iph + ip_hdr_len) > data_end) {
         return;
+    }
 
     if(iph->protocol == ICMP)
-        parse_icmp_type(iph+1, data_end, &icmp_type);
+        parse_icmp_type(((u8 *)iph + ip_hdr_len), data_end, &icmp_type);
 
-    parse_port(iph+1, data_end, iph->protocol,  &dport, &sport, &control_bit);
+    parse_port(((u8 *)iph + ip_hdr_len), data_end, iph->protocol,  &dport, &sport, &control_bit);
 
     memset(&flow_key, 0, sizeof(flow_key));
     flow_key.sa = iph->saddr;

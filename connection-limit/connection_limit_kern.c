@@ -275,15 +275,20 @@ int _xdp_limit_conn(struct xdp_md *ctx)
 
     /* Check if its valid ip packet */
     struct iphdr *iph = (struct iphdr *)(data + sizeof(struct ethhdr));
-    if (iph + 1 > data_end)
+    __u8 ip_hdr_len = iph->ihl * 4;
+
+    /* Validating IP Header */
+    if ((iph->ihl < 5 || iph->ihl > 15) || 
+        ((__u8 *)iph + ip_hdr_len) > data_end) {
         return XDP_PASS;
+    }
 
     /* Ignore other than TCP packets */
     if (iph->protocol != IPPROTO_TCP)
         return XDP_PASS;
 
     /* Check if its valid tcp packet */
-    struct tcphdr *tcph = (struct tcphdr *)(iph + 1);
+    struct tcphdr *tcph = (struct tcphdr *)((__u8 *)iph + ip_hdr_len);
     if (tcph + 1 > data_end)
         return XDP_PASS;
 

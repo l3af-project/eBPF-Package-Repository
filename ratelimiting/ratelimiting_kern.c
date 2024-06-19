@@ -99,15 +99,20 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     /* Ignore other than IP packets */
     struct iphdr *iph = data + sizeof(struct ethhdr);
-    if (iph + 1 > data_end)
+    uint8_t ip_hdr_len = iph->ihl * 4;
+
+    /* Validating IP Header */
+    if ((iph->ihl < 5 || iph->ihl > 15) || 
+        ((uint8_t *)iph + ip_hdr_len) > data_end) {
         return XDP_PASS;
+    }
 
     /* Ignore other than TCP packets */
     if (iph->protocol != IPPROTO_TCP)
         return XDP_PASS;
 
     /* Check if its valid tcp packet */
-    struct tcphdr *tcph = (struct tcphdr *)(iph + 1);
+    struct tcphdr *tcph = (struct tcphdr *)((uint8_t *)iph + ip_hdr_len);
     if (tcph + 1 > data_end)
         return XDP_PASS;
 
