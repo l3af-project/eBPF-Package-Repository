@@ -16,8 +16,8 @@ mirroring-objs := mirroring.o
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += mirroring_ingress_kern.o
-always-y += mirroring_egress_kern.o
+always-y += mirroring_ingress.bpf.o
+always-y += mirroring_egress.bpf.o
 
 
 ifeq ($(ARCH), arm)
@@ -109,8 +109,8 @@ tar.zip:
 	@rm -f l3af_traffic_mirroring.tar.gz
 	@mkdir l3af_traffic_mirroring
 	@cp $(L3AF_SRC_PATH)/mirroring l3af_traffic_mirroring/
-	@cp $(L3AF_SRC_PATH)/mirroring_ingress_kern.o l3af_traffic_mirroring/
-	@cp $(L3AF_SRC_PATH)/mirroring_egress_kern.o l3af_traffic_mirroring/
+	@cp $(L3AF_SRC_PATH)/mirroring_ingress.bpf.o l3af_traffic_mirroring/
+	@cp $(L3AF_SRC_PATH)/mirroring_egress.bpf.o l3af_traffic_mirroring/
 	@tar -cvf l3af_traffic_mirroring.tar ./l3af_traffic_mirroring
 	@gzip l3af_traffic_mirroring.tar
 
@@ -185,7 +185,7 @@ endef
 CLANG_SYS_INCLUDES = $(call get_sys_includes,$(CLANG))
 
 
-$(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/xdp_sample_shared.h
+$(obj)/%.bpf.o: $(src)/%.bpf.c $(BPF_SAMPLES_PATH)/xdp_sample.bpf.h $(BPF_SAMPLES_PATH)/xdp_sample_shared.h 
 	@echo "  CLANG-BPF " $@
 	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(SRCARCH) \
 		-Wno-compare-distinct-pointer-types -I$(srctree)/include \
@@ -201,11 +201,12 @@ $(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/x
 # with native target, e.g., x64, arm64, etc. 'opt' does bpf CORE IR builtin
 # processing (llvm12) and IR optimizations. 'llvm-dis' converts
 # 'opt' output to IR, and finally 'llc' generates bpf byte code.
+
 $(obj)/%.o: $(src)/%.c
 	@echo "  CLANG-bpf " $@
 	$(Q)$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(BPF_EXTRA_CFLAGS) \
 		-I$(obj) -I$(srctree)/tools/testing/selftests/bpf/ \
-		-I$(srctree)/tools/lib/  -I$(srctree)/tools/lib/bpf \
+		-I$(srctree)/tools/lib/ -I$(srctree)/tools/lib/bpf \
 		-D__KERNEL__ -D__BPF_TRACING__ -Wno-unused-value -Wno-pointer-sign \
 		-D__TARGET_ARCH_$(SRCARCH) -Wno-compare-distinct-pointer-types \
 		-Wno-gnu-variable-sized-type-not-at-end \

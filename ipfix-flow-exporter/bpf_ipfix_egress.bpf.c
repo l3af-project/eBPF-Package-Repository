@@ -3,21 +3,12 @@
 
 #define KBUILD_MODNAME "foo"
 
-#include <uapi/linux/bpf.h>
-#include <uapi/linux/if_ether.h>
-#include <uapi/linux/if_packet.h>
-#include <uapi/linux/if_vlan.h>
-#include <uapi/linux/ip.h>
-#include <uapi/linux/in.h>
-#include <uapi/linux/tcp.h>
-#include <uapi/linux/icmp.h>
-#include <uapi/linux/udp.h>
-#include <uapi/linux/pkt_cls.h>
-
+#include "../headers/vmlinux.h"
 #include "bpf_helpers.h"
+#include "bpf_endian.h"
 #include "bpf_ipfix_kern_common.h"
 #define DEBUG 1
-#define INGRESS 0
+#define EGRESS 1
 #define ICMP 1
 
 #define TCP_FIN  0x01
@@ -28,6 +19,7 @@
 #define TCP_URG  0x20
 #define TCP_ECE  0x40
 #define TCP_CWR  0x80
+#define TC_ACT_OK 0
 
 #define TH_FIN 0x0001
 #define TH_SYN 0x0002
@@ -40,33 +32,35 @@
 
 #define TCP_FLAGS (TCP_FIN|TCP_SYN|TCP_RST|TCP_ACK|TCP_URG|TCP_ECE|TCP_CWR)
 
-/* INGRESS MAP FOR FLOW RECORD INFO */
+#define ETH_P_ARP	0x0806		/* Address Resolution packet	*/
+#define ETH_P_IPV6	0x86DD		/* IPv6 over bluebook		*/
+#define ETH_P_IP	0x0800		/* Internet Protocol packet	*/
+/*EGRESS MAP FOR FLOW RECORD INFO */
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, u32);
     __type(value, flow_record_t);
     __uint(max_entries, MAX_RECORDS);
     __uint(pinning, LIBBPF_PIN_BY_NAME);
-} ingress_flow_record_info_map SEC(".maps");
+} egress_flow_record_info_map SEC(".maps");
 
-
-/* INGRESS MAP FOR LAST RECORD PACKET INFO */
+/* EGRESS MAP FOR LAST RECORD PACKET INFO */
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, u32);
     __type(value, flow_record_t);
     __uint(max_entries, MAX_RECORDS);
     __uint(pinning, LIBBPF_PIN_BY_NAME);
-} last_ingress_flow_record_info_map SEC(".maps");
+} last_egress_flow_record_info_map SEC(".maps");
 
-/* INGRESS MAP FOR CHAINING */
+/* EGRESS MAP FOR CHAINING */
 struct {
     __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
     __type(key, u32);
     __type(value, u32);
     __uint(max_entries, 1);
     __uint(pinning, LIBBPF_PIN_BY_NAME);
-} ipfix_ingress_jmp_table SEC(".maps");
+} ipfix_egress_jmp_table SEC(".maps");
 
 static u32 flow_key_hash (const flow_key_t f) {
     u32 hash_val = (((u32)f.sa * 0xef6e15aa)
@@ -100,8 +94,8 @@ static void update_flow_record(flow_record_t *flow_rec_from_map, flow_key_t flow
     else if (ttl < flow_rec_from_map->min_ttl)
         flow_rec.min_ttl = ttl;
 
-    flow_rec.dir = INGRESS;
-    if(bpf_map_update_elem(&ingress_flow_record_info_map, &hash_key, &flow_rec, BPF_ANY) != 0)
+    flow_rec.dir = EGRESS;
+    if(bpf_map_update_elem(&egress_flow_record_info_map, &hash_key, &flow_rec, BPF_ANY) != 0)
         return;
 
     return;
@@ -125,9 +119,9 @@ static void create_flow_record(flow_key_t flow_key, u16 pckt_size, u16 control_b
     flow_rec.max_ttl = ttl;
     flow_rec.counter = 0;
 
-    flow_rec.dir = INGRESS;
+    flow_rec.dir = EGRESS;
 
-    if(bpf_map_update_elem(&ingress_flow_record_info_map, &hash_key, &flow_rec, BPF_ANY) != 0)
+    if(bpf_map_update_elem(&egress_flow_record_info_map, &hash_key, &flow_rec, BPF_ANY) != 0)
             return;
     return;
 }
@@ -142,7 +136,7 @@ void process_flow(flow_key_t flow_key, u16 pckt_size,
 
     hash_key = flow_key_hash(flow_key);
 
-    flow_rec_from_map = bpf_map_lookup_elem(&ingress_flow_record_info_map, &hash_key);
+    flow_rec_from_map = bpf_map_lookup_elem(&egress_flow_record_info_map, &hash_key);
 
     if(flow_rec_from_map != NULL){
         update_flow_record(flow_rec_from_map, flow_key, pckt_size, control_bit, tos, icmp_type, ttl, hash_key);
@@ -182,16 +176,16 @@ static void parse_port(void *trans_data, void *data_end, u8 proto,
         if (udph + 1 > data_end) {
             return;
         }
-        dstport = ntohs(udph->dest);
-        srcport = ntohs(udph->source);
+        dstport = bpf_ntohs(udph->dest);
+        srcport = bpf_ntohs(udph->source);
         break;
     case IPPROTO_TCP:
         tcph = trans_data;
         if (tcph + 1 > data_end) {
             return;
         }
-        dstport = ntohs(tcph->dest);
-        srcport = ntohs(tcph->source);
+        dstport = bpf_ntohs(tcph->dest);
+        srcport = bpf_ntohs(tcph->source);
         if (tcph->syn & TCP_FLAGS) { controlbit = controlbit | TH_SYN; }
         if (tcph->fin & TCP_FLAGS) { controlbit = controlbit | TH_FIN; }
         if (tcph->rst & TCP_FLAGS) { controlbit = controlbit | TH_RST; }
@@ -275,7 +269,7 @@ static __always_inline int handle_eth_prot(struct __sk_buff *skb, u16 eth_proto,
 /*
  * Returns false on error and non-supported ether-type
  */
-static __always_inline bool parse_ingress_eth(struct ethhdr *eth, void *data_end,
+static __always_inline bool parse_egress_eth(struct ethhdr *eth, void *data_end,
                              u16 *eth_proto, u64 *l3_offset)
 {
     u16 eth_type;
@@ -289,13 +283,13 @@ static __always_inline bool parse_ingress_eth(struct ethhdr *eth, void *data_end
 
     /* TODO: Handle Vlan packet */
 
-    *eth_proto = ntohs(eth_type);
+    *eth_proto = bpf_ntohs(eth_type);
     *l3_offset = offset;
     return true;
 }
 
-SEC("tc_ingress_flow_monitoring")
-int _ingress_flow_monitoring(struct __sk_buff *skb)
+SEC("tc_egress_flow_monitoring")
+int _egress_flow_monitoring(struct __sk_buff *skb)
 {
     void *data     = (void *)(long)skb->data;
     void *data_end = (void *)(long)skb->data_end;
@@ -307,11 +301,11 @@ int _ingress_flow_monitoring(struct __sk_buff *skb)
     u16 eth_proto = 0;
     u64 l3_offset = 0;
 
-    if (!(parse_ingress_eth(eth, data_end, &eth_proto, &l3_offset)))
+    if (!(parse_egress_eth(eth, data_end, &eth_proto, &l3_offset)))
         return TC_ACT_OK; /* Skip */
 
     handle_eth_prot(skb, eth_proto, l3_offset);
-    bpf_tail_call(skb, &ipfix_ingress_jmp_table, 0);
+    bpf_tail_call(skb, &ipfix_egress_jmp_table, 0);
     return TC_ACT_OK;
 }
 

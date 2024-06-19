@@ -10,8 +10,8 @@ LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += tc_root_ingress_kern.o
-always-y += tc_root_egress_kern.o
+always-y += tc_root_ingress.bpf.o
+always-y += tc_root_egress.bpf.o
 
 ifeq ($(ARCH), arm)
 # Strip all except -D__LINUX_ARM_ARCH__ option needed to handle linux
@@ -101,8 +101,8 @@ tar.zip:
 	@rm -rf l3af_tc_root
 	@rm -f l3af_tc_root.tar.gz
 	@mkdir l3af_tc_root
-	@cp $(L3AF_SRC_PATH)/tc_root_ingress_kern.o l3af_tc_root/
-	@cp $(L3AF_SRC_PATH)/tc_root_egress_kern.o l3af_tc_root/
+	@cp $(L3AF_SRC_PATH)/tc_root_ingress.bpf.o l3af_tc_root/
+	@cp $(L3AF_SRC_PATH)/tc_root_egress.bpf.o l3af_tc_root/
 	@tar -cvf l3af_tc_root.tar ./l3af_tc_root
 	@gzip l3af_tc_root.tar
 
@@ -177,7 +177,7 @@ endef
 CLANG_SYS_INCLUDES = $(call get_sys_includes,$(CLANG))
 
 
-$(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/xdp_sample_shared.h
+$(obj)/%.bpf.o: $(src)/%.bpf.c $(BPF_SAMPLES_PATH)/xdp_sample.bpf.h $(BPF_SAMPLES_PATH)/xdp_sample_shared.h
 	@echo "  CLANG-BPF " $@
 	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(SRCARCH) \
 		-Wno-compare-distinct-pointer-types -I$(srctree)/include \

@@ -4,7 +4,7 @@ LINUX_SRC_PATH ?= /usr/src/linux
 BPF_SAMPLES_PATH := $(LINUX_SRC_PATH)/samples/bpf
 TOOLS_PATH := $(BPF_SAMPLES_PATH)/../../tools
 L3AF_SRC_PATH := $(CURDIR)
-
+HEADERS := $(BPF_SAMPLES_PATH)/eBPF-Package-Repository/headers
 # List of programs to build
 tprogs-y := connection_limit
 
@@ -15,7 +15,7 @@ connection_limit-objs := connection_limit_user.o
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += connection_limit_kern.o
+always-y += connection_limit.bpf.o connection_limit_kern.o
 
 
 ifeq ($(ARCH), arm)
@@ -106,6 +106,7 @@ tar.zip:
 	@rm -rf l3af_connection_limit 
 	@rm -f l3af_connection_limit.tar.gz
 	@mkdir l3af_connection_limit
+	@cp $(L3AF_SRC_PATH)/connection_limit.bpf.o l3af_connection_limit/
 	@cp $(L3AF_SRC_PATH)/connection_limit_kern.o l3af_connection_limit/
 	@cp $(L3AF_SRC_PATH)/connection_limit l3af_connection_limit/
 	@tar -cvf l3af_connection_limit.tar ./l3af_connection_limit
@@ -181,8 +182,9 @@ endef
 
 CLANG_SYS_INCLUDES = $(call get_sys_includes,$(CLANG))
 
+# 
 
-$(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/xdp_sample_shared.h
+$(obj)/%.bpf.o: $(src)/%.bpf.c $(BPF_SAMPLES_PATH)/xdp_sample.bpf.h $(BPF_SAMPLES_PATH)/xdp_sample_shared.h 
 	@echo "  CLANG-BPF " $@
 	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(SRCARCH) \
 		-Wno-compare-distinct-pointer-types -I$(srctree)/include \
@@ -198,6 +200,7 @@ $(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/x
 # with native target, e.g., x64, arm64, etc. 'opt' does bpf CORE IR builtin
 # processing (llvm12) and IR optimizations. 'llvm-dis' converts
 # 'opt' output to IR, and finally 'llc' generates bpf byte code.
+
 $(obj)/%.o: $(src)/%.c
 	@echo "  CLANG-bpf " $@
 	$(Q)$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(BPF_EXTRA_CFLAGS) \
