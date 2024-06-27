@@ -251,16 +251,7 @@ bool validate_netlink(struct route_config *r)
         fprintf(stderr, "ERR: No routing information provided\n");
         return false;
     }
-    if (strcmp(r->encap_type, "gue") == 0)
-    {
-        r->type = "ipip";
-        r->name = "gue1";
-    }
-    else
-    {
-        fprintf(stderr, "ERR: --tunnel-type unknown value\n");
-        return false;
-    }
+    r->name = "tunnelRoute";
 
     getifaddrs(&ifap);
     for (ifa = ifap; ifa; ifa = ifa->ifa_next)
@@ -311,19 +302,20 @@ static const struct option long_options[] = {
     {"iface", required_argument, NULL, 'i'},
     {"redirect-to", required_argument, NULL, 'e'},
     /* HINT assign: optional_arguments with '=' */
-    {"direction", optional_argument, NULL, 't'},
-    {"src-address", optional_argument, NULL, 's'},
-    {"dst-address", optional_argument, NULL, 'd'},
-    {"gtw-address", optional_argument, NULL, 'g'},
-    {"src-port", optional_argument, NULL, 'u'},
-    {"dst-port", optional_argument, NULL, 'U'},
-    {"protocol", optional_argument, NULL, 'r'},
-    {"tunnel-remote-address", optional_argument, NULL, 'D'},
-    {"tunnel-type", optional_argument, NULL, 'T'},
-    {"tunnel-local-port", optional_argument, NULL, 'p'},
-    {"tunnel-remote-port", optional_argument, NULL, 'P'},
-    {"quiet", no_argument, NULL, 'q'},
-    {0, 0, NULL, 0}};
+    { "direction", optional_argument, NULL, 't' },
+    { "src-address", optional_argument, NULL, 's' },
+    { "dst-address", optional_argument, NULL, 'd' },
+    { "gtw-address", optional_argument, NULL, 'g' },
+    { "src-port", optional_argument, NULL, 'u' },
+    { "dst-port", optional_argument, NULL, 'U' },
+    { "protocol", optional_argument, NULL, 'r' },
+    { "tunnel-remote-address", optional_argument, NULL, 'D' },
+    { "tunnel-interface-name", optional_argument, NULL, 'T' },
+    { "tunnel-local-port", optional_argument, NULL, 'p' },
+    { "tunnel-remote-port", optional_argument, NULL, 'P' },
+    { "quiet", no_argument, NULL, 'q' },
+    { 0, 0, NULL, 0 }
+};
 
 static void usage(char *argv[])
 {
@@ -837,12 +829,11 @@ int main(int argc, char **argv)
                 r.dport[l] = '\0';
             }
             break;
-        case 'T':
-            if (optarg)
-            {
-                r.encap_type = optarg;
-                l = get_length(r.encap_type);
-                r.encap_type[l] = '\0';
+	case 'T':
+	    if (optarg) {
+                r.encap_interface_name = optarg;
+                l = get_length(r.encap_interface_name);
+                r.encap_interface_name[l] = '\0';
             }
             break;
         case 'q':
@@ -1053,7 +1044,7 @@ int main(int argc, char **argv)
     // reset errno
     errno = 0;
 
-    tunnel_ifindex = if_nametoindex(r.name);
+    tunnel_ifindex = if_nametoindex(r.encap_interface_name);
     /* Only update/set egress port when set via cmdline */
     int redirect_iface_key = 0;
     if (tunnel_ifindex != -1)
