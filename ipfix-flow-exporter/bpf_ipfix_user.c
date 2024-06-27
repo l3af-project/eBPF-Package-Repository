@@ -192,7 +192,7 @@ bool validate_ifname(const char* input_ifname, char *output_ifname)
     for (i = 0; i < len; i++) {
         char c = input_ifname[i];
 
-        if (!(isalpha(c) || isdigit(c)))
+        if (!(isalpha(c) || isdigit(c) || c == '-'))
             return false;
     }
     iface = (void *)input_ifname;
@@ -391,4 +391,12 @@ int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file)
         return -1;
     }
     return 0;
+}
+
+/* Close a file fd */
+void close_fd(int fd){
+  if(fd >= 0){
+     close(fd);
+  }
+  return;
 }

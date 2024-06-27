@@ -101,4 +101,8 @@ bool validate_map_name(const char *path);
 bool validate_map(const char* input);
 
 int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file);
+
+void close_fd(int fd);
+void close_ingress_fds(void);
+void close_egress_fds(void);
 #endif

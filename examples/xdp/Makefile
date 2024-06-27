@@ -10,7 +10,7 @@ LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += xdpprog_kern.o
+always-y += xdpprog.bpf.o
 
 
 ifeq ($(ARCH), arm)
@@ -168,7 +168,7 @@ endef
 CLANG_SYS_INCLUDES = $(call get_sys_includes,$(CLANG))
 
 
-$(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/xdp_sample_shared.h
+$(obj)/%.bpf.o: $(src)/%.bpf.c $(BPF_SAMPLES_PATH)/xdp_sample.bpf.h $(BPF_SAMPLES_PATH)/xdp_sample_shared.h
 	@echo "  CLANG-BPF " $@
 	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(SRCARCH) \
 		-Wno-compare-distinct-pointer-types -I$(srctree)/include \

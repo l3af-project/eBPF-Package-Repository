@@ -96,5 +96,6 @@ int verbosity ;
 
 void log_timestamp(char *log_ts);
 FILE* set_log_file(void);
+void close_log_file(void);
 #endif /* LOG_H */
 

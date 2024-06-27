@@ -5,7 +5,6 @@
 #define BPF_IPFIX_KERN_COMMON_H
 
 #define MAX_RECORDS 30000
-
 typedef struct flow_key_ {
     u32 sa;
     u32 da;
@@ -31,6 +30,18 @@ typedef struct flow_record_ {
     u64 flow_id;                    /* flow id */
     u16 counter;                    /* flow_idle_counter */
 } flow_record_t;
+
+void *memset(void *b, int c, unsigned long len)
+{
+  if (b == NULL || len <= 0)
+      return b;
+  unsigned char *ptr = b;
+   while(*ptr != '\0' && len--)
+    {
+      *ptr++ = (unsigned char)c;
+    }
+  return(b);
+}
 
 #define flow_key_hash_mask 0x000fffff
 

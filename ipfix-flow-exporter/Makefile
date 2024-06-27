@@ -18,8 +18,8 @@ bpf_ipfix_egress-objs := bpf_ipfix_egress_user.o  bpf_ipfix_user.o ipfix.o
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += bpf_ipfix_ingress_kern.o
-always-y += bpf_ipfix_egress_kern.o
+always-y += bpf_ipfix_ingress.bpf.o
+always-y += bpf_ipfix_egress.bpf.o
 
 
 ifeq ($(ARCH), arm)
@@ -111,8 +111,8 @@ tar.zip:
 	@rm -f l3af_bpf_ipfix.tar.gz
 	@mkdir l3af_bpf_ipfix
 	@cp $(L3AF_SRC_PATH)/bpf_ipfix_ingress l3af_bpf_ipfix/
-	@cp $(L3AF_SRC_PATH)/bpf_ipfix_ingress_kern.o l3af_bpf_ipfix/
-	@cp $(L3AF_SRC_PATH)/bpf_ipfix_egress_kern.o l3af_bpf_ipfix/
+	@cp $(L3AF_SRC_PATH)/bpf_ipfix_ingress.bpf.o l3af_bpf_ipfix/
+	@cp $(L3AF_SRC_PATH)/bpf_ipfix_egress.bpf.o l3af_bpf_ipfix/
 	@cp $(L3AF_SRC_PATH)/bpf_ipfix_egress l3af_bpf_ipfix/
 	@tar -cvf l3af_bpf_ipfix.tar ./l3af_bpf_ipfix
 	@gzip l3af_bpf_ipfix.tar
@@ -188,7 +188,7 @@ endef
 CLANG_SYS_INCLUDES = $(call get_sys_includes,$(CLANG))
 
 
-$(obj)/%.bpf.o: $(src)/%.bpf.c $(obj)/vmlinux.h $(src)/xdp_sample.bpf.h $(src)/xdp_sample_shared.h
+$(obj)/%.bpf.o: $(src)/%.bpf.c $(BPF_SAMPLES_PATH)/xdp_sample.bpf.h $(BPF_SAMPLES_PATH)/xdp_sample_shared.h 
 	@echo "  CLANG-BPF " $@
 	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(SRCARCH) \
 		-Wno-compare-distinct-pointer-types -I$(srctree)/include \
@@ -208,7 +208,7 @@ $(obj)/%.o: $(src)/%.c
 	@echo "  CLANG-bpf " $@
 	$(Q)$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(BPF_EXTRA_CFLAGS) \
 		-I$(obj) -I$(srctree)/tools/testing/selftests/bpf/ \
-		-I$(srctree)/tools/lib/  -I$(srctree)/tools/lib/bpf \
+		-I$(srctree)/tools/lib/ -I$(srctree)/tools/lib/bpf \
 		-D__KERNEL__ -D__BPF_TRACING__ -Wno-unused-value -Wno-pointer-sign \
 		-D__TARGET_ARCH_$(SRCARCH) -Wno-compare-distinct-pointer-types \
 		-Wno-gnu-variable-sized-type-not-at-end \
