@@ -1,7 +1,7 @@
 // Copyright Contributors to the L3AF Project.
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
-#include "./vmlinux.h"
+#include "vmlinux.h"
 #include "bpf_helpers.h"
 
 #define ROOT_ARRAY_SIZE 1

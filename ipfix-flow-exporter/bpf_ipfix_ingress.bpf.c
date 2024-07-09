@@ -3,7 +3,7 @@
 
 #define KBUILD_MODNAME "foo"
 
-#include "./vmlinux.h"
+#include "vmlinux.h"
 #include "bpf_helpers.h"
 #include "bpf_endian.h"
 #include "bpf_ipfix_kern_common.h"
