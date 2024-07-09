@@ -24,7 +24,7 @@ jobs:
     name: Analyze
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:bionic
+      image: ubuntu:jammy
     permissions:
       actions: read
       contents: read
