@@ -79,11 +79,6 @@ jobs:
         with:
           path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
 
-      - name: Generate vmlinux.h
-        run: |
-          mkdir -p $LINUX_SRC_PATH/$BPF_PATH/$REPO/headers 
-          bpftool btf dump file /sys/kernel/btf/vmlinux format c > $LINUX_SRC_PATH/$BPF_PATH/$REPO/headers/vmlinux.h
-
       - name: Build eBPF Program and Upload artifacts
         run: |
           cd $LINUX_SRC_PATH/$BPF_PATH/$REPO

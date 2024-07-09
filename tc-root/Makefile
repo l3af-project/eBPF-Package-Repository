@@ -95,7 +95,9 @@ endif
 # Trick to allow make to be run from this directory
 all:build tar.zip
 build:
-	bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(L3AF_SRC_PATH)/vmlinux.h
+	if [ ! -f $(L3AF_SRC_PATH)/vmlinux.h ]; then \
+		bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(L3AF_SRC_PATH)/vmlinux.h; \
+        fi
 	$(MAKE) -C $(LINUX_SRC_PATH) M=$(L3AF_SRC_PATH)
 
 tar.zip:
