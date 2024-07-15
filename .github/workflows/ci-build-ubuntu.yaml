@@ -60,7 +60,7 @@ jobs:
                   fi' scripts/link-vmlinux.sh
           echo "CONFIG_DEBUG_INFO_BTF=y" >> .config
           echo "CONFIG_MODULES=y" >> .config
-          make oldconfig
+          make olddefconfig
           make prepare
           yes | make -j$(nproc)
           make headers_install
@@ -78,11 +78,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
-
-      - name: Generate vmlinux.h
-        run: |
-          mkdir -p $LINUX_SRC_PATH/$BPF_PATH/$REPO/headers 
-          bpftool btf dump file /sys/kernel/btf/vmlinux format c > $LINUX_SRC_PATH/$BPF_PATH/$REPO/headers/vmlinux.h
 
       - name: Build eBPF Program and Upload artifacts
         run: |

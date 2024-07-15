@@ -5,7 +5,7 @@
 #ifndef _TC_ROOT_COMMON_STRUCTS_H
 #define _TC_ROOT_COMMON_STRUCTS_H
 
-#include "../../headers/vmlinux.h"
+#include "vmlinux.h"
 #include "bpf/bpf_endian.h"
 #include "bpf/bpf_helpers.h"
 

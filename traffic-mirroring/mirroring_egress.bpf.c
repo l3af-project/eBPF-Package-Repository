@@ -7,7 +7,7 @@
  *          use the 'tc' cmdline tool from iproute2 for loading and
  *          attaching bpf programs.
  */
-#include "../headers/vmlinux.h"
+#include "vmlinux.h"
 #include "bpf_helpers.h"
 #include "bpf_endian.h"
 #define ETH_P_IP	0x0800		/* Internet Protocol packet	*/

@@ -5,7 +5,7 @@
 
 
 #define KBUILD_MODNAME "foo"
-#include "../headers/vmlinux.h"
+#include "vmlinux.h"
 #include "bpf_helpers.h"
 #include "bpf_endian.h"
 

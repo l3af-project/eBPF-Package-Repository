@@ -100,6 +100,9 @@ endif
 # Trick to allow make to be run from this directory
 all:build tar.zip
 build:
+	if [ ! -f $(L3AF_SRC_PATH)/vmlinux.h ]; then \
+		bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(L3AF_SRC_PATH)/vmlinux.h; \
+        fi
 	$(MAKE) -C $(LINUX_SRC_PATH) M=$(L3AF_SRC_PATH)
 
 tar.zip:
@@ -117,6 +120,7 @@ clean:
 	@find $(CURDIR) -type f -name '*~' -delete
 	@rm -f ./*.o
 	@rm -f l3af_connection_limit.tar.gz
+	@rm -rf $(L3AF_SRC_PATH)/vmlinux.h
 
 $(LIBBPF): FORCE
 # Fix up variables inherited from Kbuild that tools/ build system won't like
