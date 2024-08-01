@@ -11,7 +11,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
     __uint(key_size, sizeof(int));
     __uint(value_size, sizeof(int));
-   __uint(max_entries, ARRAY_SIZE);
+    __uint(max_entries, ARRAY_SIZE);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } xdp_next_prog_array SEC(".maps");
 
 SEC("xdp-prog")
