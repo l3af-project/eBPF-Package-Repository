@@ -25,7 +25,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
     __uint(key_size, sizeof(uint32_t));
     __uint(value_size, sizeof(uint64_t));
-   __uint(max_entries, 1);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } rl_config_map SEC(".maps");
 
 /* Maintains the timestamp of a window and the total number of
@@ -34,7 +35,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_LRU_HASH);
     __uint(key_size, sizeof(uint64_t));
     __uint(value_size, sizeof(uint64_t));
-   __uint(max_entries, 1000);
+    __uint(max_entries, 1000);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } rl_window_map SEC(".maps");
 
 /* Maintains the total number of connections received(TCP-SYNs)
@@ -43,7 +45,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(key_size, sizeof(uint64_t));
     __uint(value_size, sizeof(uint64_t));
-   __uint(max_entries, 1);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } rl_recv_count_map SEC(".maps");
 
 /* Maintains the total number of connections dropped as the ratelimit is hit
@@ -52,7 +55,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(key_size, sizeof(uint64_t));
     __uint(value_size, sizeof(uint64_t));
-   __uint(max_entries, 1);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } rl_drop_count_map SEC(".maps");
 
 /* Maintains the ports to be ratelimited */
@@ -60,7 +64,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(key_size, sizeof(uint16_t));
     __uint(value_size, sizeof(uint8_t));
-   __uint(max_entries, 50);
+    __uint(max_entries, 50);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } rl_ports_map SEC(".maps");
 
 /* Maintains the prog fd of the next XDP program in the chain */
@@ -68,7 +73,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
     __uint(key_size, sizeof(int));
     __uint(value_size, sizeof(int));
-   __uint(max_entries, 1);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } xdp_rl_ingress_next_prog SEC(".maps");
 
 
