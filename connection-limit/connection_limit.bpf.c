@@ -62,7 +62,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
     __uint(key_size, sizeof(uint32_t));
     __uint(value_size, sizeof(uint64_t));
-   __uint(max_entries, 1);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } cl_max_conn SEC(".maps");
 
 /* Maintains TCP listen ports */
@@ -70,7 +71,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(key_size, sizeof(uint16_t));
     __uint(value_size, sizeof(uint32_t));
-   __uint(max_entries, 200);
+    __uint(max_entries, 200);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } cl_tcp_conns SEC(".maps");
 
 /* Maintains concurrent connection sockets */
@@ -78,7 +80,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(key_size, sizeof(uint64_t));
     __uint(value_size, sizeof(uint32_t));
-   __uint(max_entries, 30000);
+    __uint(max_entries, 30000);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } cl_conn_info SEC(".maps");
 
 /* Maintains the total number of connections received(TCP-SYNs)
@@ -87,7 +90,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(key_size, sizeof(uint32_t));
     __uint(value_size, sizeof(uint64_t));
-   __uint(max_entries, 1);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } cl_recv_count_map SEC(".maps");
 
 /* Maintains the total number of connections dropped as the
@@ -96,7 +100,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(key_size, sizeof(uint32_t));
     __uint(value_size, sizeof(uint64_t));
-   __uint(max_entries, 1);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } cl_drop_count_map SEC(".maps");
 
 /* Maintains the prog fd of the next XDP program in the chain */
@@ -104,7 +109,8 @@ struct {
     __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
     __uint(key_size, sizeof(int));
     __uint(value_size, sizeof(int));
-   __uint(max_entries, 1);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
 } xdp_cl_ingress_next_prog SEC(".maps");
 
 static __always_inline int is_ipv4_loopback(uint32_t *addr4)
