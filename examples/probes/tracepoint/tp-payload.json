@@ -1,0 +1,23 @@
+[
+  {
+    "host_name" : "lima-l3af-dev",
+    "iface" : "eth0",
+    "bpf_programs" : {
+      "probes" : [{
+        "name": "tpoint",
+        "artifact": "l3af_tracepoint.tar.gz",
+        "version": "latest",
+        "admin_status": "enabled",
+        "prog_type": "tracepoint",
+        "cfg_version": 1,
+        "monitor_maps": [
+          { "name": "counting_map", "key": 0, "aggregator": "scalar"}
+        ],
+        "object_file": "tracepoint.bpf.o",
+        "entry_function_name": "tcp_bad_csum"
+      }
+      ]
+
+    }
+  }
+]
