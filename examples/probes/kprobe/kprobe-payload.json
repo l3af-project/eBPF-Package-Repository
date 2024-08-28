@@ -1,0 +1,22 @@
+[
+  {
+    "host_name" : "l3af-local-test",
+    "iface" : "enp0s3",
+    "bpf_programs" : {
+      "probes" : [{
+        "name": "file-unlink",
+        "artifact": "l3af_kprobe.tar.gz",
+        "version": "latest",
+        "admin_status": "enabled",
+        "prog_type": "kprobe",
+        "cfg_version": 1,
+        "monitor_maps": [
+          { "name": "counting_map", "key": 0, "aggregator": "scalar"}
+        ],
+        "object_file": "tracepoint.bpf.o",
+        "entry_function_name": "tcp_bad_csum"
+      }
+      ]
+    }
+  }
+]

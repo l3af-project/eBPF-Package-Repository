@@ -10,7 +10,8 @@ LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
 
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += xdp_root.bpf.o xdp_root_kern.o
+always-y += kprobe.bpf.o
+
 
 ifeq ($(ARCH), arm)
 # Strip all except -D__LINUX_ARM_ARCH__ option needed to handle linux
@@ -44,7 +45,7 @@ TPROGS_CFLAGS += --sysroot=$(SYSROOT)
 TPROGS_LDFLAGS := -L$(SYSROOT)/usr/lib
 endif
 
-TPROGS_LDLIBS			+= $(LIBBPF) -lelf -lz
+TPROGS_LDLIBS			+= $(LIBBPF) -lelf -lz -lcrypto
 
 # Allows pointing LLC/CLANG to a LLVM backend with bpf support, redefine on cmdline:
 # make M=samples/bpf LLC=~/git/llvm-project/llvm/build/bin/llc CLANG=~/git/llvm-project/llvm/build/bin/clang
@@ -96,24 +97,22 @@ all:build tar.zip
 build:
 	if [ ! -f $(L3AF_SRC_PATH)/vmlinux.h ]; then \
 		bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(L3AF_SRC_PATH)/vmlinux.h; \
-        fi
+    fi
 	$(MAKE) -C $(LINUX_SRC_PATH) M=$(L3AF_SRC_PATH)
 
 tar.zip:
-	@rm -rf l3af_xdp_root
-	@rm -f l3af_xdp_root.tar.gz
-	@mkdir l3af_xdp_root
-	@cp $(L3AF_SRC_PATH)/xdp_root.bpf.o l3af_xdp_root/
-	@cp $(L3AF_SRC_PATH)/xdp_root_kern.o l3af_xdp_root/
-	@tar -cvf l3af_xdp_root.tar ./l3af_xdp_root
-	@gzip l3af_xdp_root.tar
+	@rm -rf l3af_kprobe
+	@rm -f l3af_kprobe.tar.gz
+	@mkdir l3af_kprobe
+	@cp $(L3AF_SRC_PATH)/kprobe.bpf.o ./l3af_kprobe
+	@tar -cvf l3af_kprobe.tar ./l3af_kprobe
+	@gzip l3af_kprobe.tar
 
 clean:
 	$(MAKE) -C $(LINUX_SRC_PATH) M=$(L3AF_SRC_PATH) clean
 	@find $(CURDIR) -type f -name '*~' -delete
 	@rm -f ./*.o
-	@rm -f l3af_xdp_root.tar.gz
-	@rm -f $(L3AF_SRC_PATH)/vmlinux.h
+	@rm -f *~
 
 $(LIBBPF): FORCE
 # Fix up variables inherited from Kbuild that tools/ build system won't like
@@ -196,12 +195,11 @@ $(obj)/%.bpf.o: $(src)/%.bpf.c $(BPF_SAMPLES_PATH)/xdp_sample.bpf.h $(BPF_SAMPLE
 # with native target, e.g., x64, arm64, etc. 'opt' does bpf CORE IR builtin
 # processing (llvm12) and IR optimizations. 'llvm-dis' converts
 # 'opt' output to IR, and finally 'llc' generates bpf byte code.
-
 $(obj)/%.o: $(src)/%.c
 	@echo "  CLANG-bpf " $@
 	$(Q)$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(BPF_EXTRA_CFLAGS) \
 		-I$(obj) -I$(srctree)/tools/testing/selftests/bpf/ \
-		-I$(srctree)/tools/lib/ -I$(srctree)/tools/lib/bpf \
+		-I$(srctree)/tools/lib/  -I$(srctree)/tools/lib/bpf \
 		-D__KERNEL__ -D__BPF_TRACING__ -Wno-unused-value -Wno-pointer-sign \
 		-D__TARGET_ARCH_$(SRCARCH) -Wno-compare-distinct-pointer-types \
 		-Wno-gnu-variable-sized-type-not-at-end \
