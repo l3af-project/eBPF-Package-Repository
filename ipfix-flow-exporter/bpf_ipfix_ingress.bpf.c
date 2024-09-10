@@ -72,17 +72,6 @@ static u32 flow_key_hash (const flow_key_t f) {
     return hash_val;
 }
 
-struct update_flow_record_args {
-    flow_record_t *flow_rec_from_map;
-    flow_key_t flow_key;
-    u16 pckt_size;
-    u16 control_bit;
-    u8 tos;
-    u16 icmp_type;
-    u8 ttl;
-    u32 hash_key;
-};
-
 static void update_flow_record(struct update_flow_record_args *args)
 {
     flow_record_t flow_rec ;
@@ -110,16 +99,6 @@ static void update_flow_record(struct update_flow_record_args *args)
 
     return;
 }
-
-struct create_flow_record_args {
-    flow_key_t flow_key;
-    u16 pckt_size;
-    u16 control_bit;
-    u8 tos;
-    u16 icmp_type;
-    u8 ttl;
-    u32 hash_key;
-};
 
 static void create_flow_record(struct create_flow_record_args *args)
 {
@@ -195,15 +174,6 @@ static void parse_icmp_type(void *icmp_data,void *data_end, u16 *icmp_type){
     *icmp_type = icmp_type_val;
     return;
 }
-
-struct parse_port_args {
-    void *trans_data;
-    void *data_end;
-    u8 proto;
-    u32 *dport;
-    u32 *sport;
-    u16 *control_bit;
-};
 
 static void parse_port(struct parse_port_args *args)
 {
