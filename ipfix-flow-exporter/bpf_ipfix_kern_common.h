@@ -46,3 +46,33 @@ void *memset(void *b, int c, unsigned long len)
 #define flow_key_hash_mask 0x000fffff
 
 #endif
+
+struct update_flow_record_args {
+    flow_record_t *flow_rec_from_map;
+    flow_key_t flow_key;
+    u16 pckt_size;
+    u16 control_bit;
+    u8 tos;
+    u16 icmp_type;
+    u8 ttl;
+    u32 hash_key;
+};
+
+struct create_flow_record_args {
+    flow_key_t flow_key;
+    u16 pckt_size;
+    u16 control_bit;
+    u8 tos;
+    u16 icmp_type;
+    u8 ttl;
+    u32 hash_key;
+};
+
+struct parse_port_args {
+    void *trans_data;
+    void *data_end;
+    u8 proto;
+    u32 *dport;
+    u32 *sport;
+    u16 *control_bit;
+};

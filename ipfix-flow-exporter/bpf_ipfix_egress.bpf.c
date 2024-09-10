@@ -71,60 +71,58 @@ static u32 flow_key_hash (const flow_key_t f) {
     return hash_val;
 }
 
-static void update_flow_record(flow_record_t *flow_rec_from_map, flow_key_t flow_key,
-                               u16 pckt_size, u16 control_bit, u8 tos, u16 icmp_type,
-                               u8 ttl, u32 hash_key)
+static void update_flow_record(struct update_flow_record_args *args)
 {
     flow_record_t flow_rec ;
     memset(&flow_rec, 0, sizeof(flow_record_t));
 
-    flow_rec.key = flow_rec_from_map->key;
-    flow_rec.np = flow_rec_from_map->np + 1 ;
-    flow_rec.nb = flow_rec_from_map->nb + pckt_size;
+    flow_rec.key = args->flow_rec_from_map->key;
+    flow_rec.np = args->flow_rec_from_map->np + 1 ;
+    flow_rec.nb = args->flow_rec_from_map->nb + args->pckt_size;
     flow_rec.flow_end = bpf_ktime_get_ns();
-    flow_rec.flow_start = flow_rec_from_map->flow_start;
-    flow_rec.tcp_control_bits = control_bit | flow_rec_from_map->tcp_control_bits ;
-    flow_rec.tos = tos | flow_rec_from_map->tos ;
-    flow_rec.icmp_type = icmp_type | flow_rec_from_map->icmp_type ;
-    flow_rec.min_ttl = flow_rec_from_map->min_ttl;
-    flow_rec.max_ttl = flow_rec_from_map->max_ttl;
+    flow_rec.flow_start = args->flow_rec_from_map->flow_start;
+    flow_rec.tcp_control_bits = args->control_bit | args->flow_rec_from_map->tcp_control_bits ;
+    flow_rec.tos = args->tos | args->flow_rec_from_map->tos ;
+    flow_rec.icmp_type = args->icmp_type | args->flow_rec_from_map->icmp_type ;
+    flow_rec.min_ttl = args->flow_rec_from_map->min_ttl;
+    flow_rec.max_ttl = args->flow_rec_from_map->max_ttl;
 
-    if(ttl > flow_rec_from_map->max_ttl)
-        flow_rec.max_ttl = ttl;
-    else if (ttl < flow_rec_from_map->min_ttl)
-        flow_rec.min_ttl = ttl;
+    if(args->ttl > args->flow_rec_from_map->max_ttl)
+        flow_rec.max_ttl = args->ttl;
+    else if (args->ttl < args->flow_rec_from_map->min_ttl)
+        flow_rec.min_ttl = args->ttl;
 
     flow_rec.dir = EGRESS;
-    if(bpf_map_update_elem(&egress_flow_record_info_map, &hash_key, &flow_rec, BPF_ANY) != 0)
+    if(bpf_map_update_elem(&egress_flow_record_info_map, &args->hash_key, &flow_rec, BPF_ANY) != 0)
         return;
 
     return;
 }
 
-static void create_flow_record(flow_key_t flow_key, u16 pckt_size, u16 control_bit, u8 tos,
-                               u16 icmp_type, u8 ttl, u32 hash_key)
+static void create_flow_record(struct create_flow_record_args *args)
 {
     flow_record_t flow_rec ;
     memset(&flow_rec, 0, sizeof(flow_record_t));
 
-    flow_rec.key = flow_key ;
+    flow_rec.key = args->flow_key ;
     flow_rec.np = 1 ;
-    flow_rec.nb = pckt_size;
+    flow_rec.nb = args->pckt_size;
     flow_rec.flow_start = bpf_ktime_get_ns();
     flow_rec.flow_end = bpf_ktime_get_ns();
-    flow_rec.tcp_control_bits = control_bit;
-    flow_rec.tos = tos ;
-    flow_rec.icmp_type = icmp_type;
-    flow_rec.min_ttl = ttl;
-    flow_rec.max_ttl = ttl;
+    flow_rec.tcp_control_bits = args->control_bit;
+    flow_rec.tos = args->tos ;
+    flow_rec.icmp_type = args->icmp_type;
+    flow_rec.min_ttl = args->ttl;
+    flow_rec.max_ttl = args->ttl;
     flow_rec.counter = 0;
 
     flow_rec.dir = EGRESS;
 
-    if(bpf_map_update_elem(&egress_flow_record_info_map, &hash_key, &flow_rec, BPF_ANY) != 0)
+    if(bpf_map_update_elem(&egress_flow_record_info_map, &args->hash_key, &flow_rec, BPF_ANY) != 0)
             return;
     return;
 }
+
 
 static __always_inline
 void process_flow(flow_key_t flow_key, u16 pckt_size,
@@ -139,10 +137,27 @@ void process_flow(flow_key_t flow_key, u16 pckt_size,
     flow_rec_from_map = bpf_map_lookup_elem(&egress_flow_record_info_map, &hash_key);
 
     if(flow_rec_from_map != NULL){
-        update_flow_record(flow_rec_from_map, flow_key, pckt_size, control_bit, tos, icmp_type, ttl, hash_key);
+        struct update_flow_record_args update_flow_args;
+        update_flow_args.flow_rec_from_map = flow_rec_from_map;
+        update_flow_args.flow_key = flow_key;
+        update_flow_args.pckt_size = pckt_size;
+        update_flow_args.control_bit = control_bit;
+        update_flow_args.tos = tos;
+        update_flow_args.icmp_type = icmp_type;
+        update_flow_args.ttl = ttl;
+        update_flow_args.hash_key = hash_key;
+        update_flow_record(&update_flow_args);
     }
     else{
-        create_flow_record(flow_key, pckt_size, control_bit, tos, icmp_type, ttl, hash_key);
+        struct create_flow_record_args create_flow_args;
+        create_flow_args.flow_key = flow_key;
+        create_flow_args.pckt_size = pckt_size;
+        create_flow_args.control_bit = control_bit;
+        create_flow_args.tos = tos;
+        create_flow_args.icmp_type = icmp_type;
+        create_flow_args.ttl = ttl;
+        create_flow_args.hash_key = hash_key;
+        create_flow_record(&create_flow_args);
     }
 }
 
@@ -160,8 +175,7 @@ static void parse_icmp_type(void *icmp_data,void *data_end, u16 *icmp_type){
     return;
 }
 
-static void parse_port(void *trans_data, void *data_end, u8 proto,
-                       u32 *dport, u32 *sport, u16 *control_bit)
+static void parse_port(struct parse_port_args *args)
 {
     struct udphdr *udph;
     struct tcphdr *tcph;
@@ -170,18 +184,18 @@ static void parse_port(void *trans_data, void *data_end, u8 proto,
     u32 srcport = 0;
     u16 controlbit = 0;
 
-    switch (proto) {
+    switch (args->proto) {
     case IPPROTO_UDP:
-        udph = trans_data;
-        if (udph + 1 > data_end) {
+        udph = args->trans_data;
+        if (udph + 1 > args->data_end) {
             return;
         }
         dstport = bpf_ntohs(udph->dest);
         srcport = bpf_ntohs(udph->source);
         break;
     case IPPROTO_TCP:
-        tcph = trans_data;
-        if (tcph + 1 > data_end) {
+        tcph = args->trans_data;
+        if (tcph + 1 > args->data_end) {
             return;
         }
         dstport = bpf_ntohs(tcph->dest);
@@ -199,9 +213,9 @@ static void parse_port(void *trans_data, void *data_end, u8 proto,
         srcport = 0;
         break;
     }
-    *dport = dstport;
-    *sport = srcport;
-    *control_bit = controlbit;
+    *(args->dport) = dstport;
+    *(args->sport) = srcport;
+    *(args->control_bit) = controlbit;
     return ;
 }
 
@@ -238,8 +252,18 @@ void parse_ipv4(struct __sk_buff *skb, u64 l3_offset)
     if(iph->protocol == ICMP)
         parse_icmp_type(iph+1, data_end, &icmp_type);
 
-    parse_port(iph+1, data_end, iph->protocol,  &dport, &sport, &control_bit);
-
+    struct parse_port_args port_args;
+    port_args.trans_data = iph+1;
+    port_args.data_end = data_end;
+    port_args.proto = iph->protocol;
+    port_args.dport = &dport;
+    port_args.sport = &sport;
+    port_args.control_bit = &control_bit;
+    parse_port(&port_args);
+    data_end =port_args.data_end;
+    dport = *port_args.dport;
+    sport = *port_args.sport;
+    control_bit = *port_args.control_bit;
     memset(&flow_key, 0, sizeof(flow_key));
     flow_key.sa = iph->saddr;
     flow_key.da = iph->daddr;
