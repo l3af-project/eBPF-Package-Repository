@@ -5,7 +5,7 @@
     "bpf_programs" : {
       "probes" : [{
         "name": "file-unlink",
-        "artifact": "l3af_kprobe.tar.gz",
+        "artifact": "l3af_kretprobe.tar.gz",
         "version": "latest",
         "admin_status": "enabled",
         "prog_type": "kprobe",
@@ -13,8 +13,8 @@
         "monitor_maps": [
           { "name": "counting_map", "key": 0, "aggregator": "scalar"}
         ],
-        "object_file": "kprobe.bpf.o",
-        "entry_function_name": "do_unlinkat"
+        "object_file": "kretprobe.bpf.o",
+        "entry_function_name": "do_unlinkat_exit"
       }
       ]
     }
