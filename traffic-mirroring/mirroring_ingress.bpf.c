@@ -26,7 +26,7 @@ struct saddr_key {
 };
 
 #define MAX_ADDRESSES 50
-#define KEY_SIZE_IPV4 sizeof(struct bpf_lpm_trie_key) + sizeof(__u32)
+#define KEY_SIZE_IPV4 sizeof(__u32) + sizeof(__u8) + sizeof(__u32)
 
 struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
