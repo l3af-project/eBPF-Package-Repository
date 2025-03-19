@@ -1,0 +1,21 @@
+[
+  {
+    "host_name" : "l3af-local-test",
+    "iface" : "enp0s3",
+    "bpf_programs" : {
+      "probes" : [{
+        "name": "curl-uprobe",
+        "artifact": "l3af_uprobe.tar.gz",
+        "version": "latest",
+        "admin_status": "enabled",
+        "prog_type": "uprobe",
+        "cfg_version": 1,
+        "monitor_maps": [
+        ],
+        "object_file": "uprobe.bpf.o",
+        "entry_function_name": "curl_ver_info"
+      }
+      ]
+    }
+  }
+]
