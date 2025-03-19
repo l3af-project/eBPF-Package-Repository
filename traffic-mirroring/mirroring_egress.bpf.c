@@ -10,6 +10,7 @@
 #include "vmlinux.h"
 #include "bpf_helpers.h"
 #include "bpf_endian.h"
+#include "bpf/bpf.h"
 #define ETH_P_IP	0x0800		/* Internet Protocol packet	*/
 #define ETH_P_ARP	0x0806		/* Address Resolution packet	*/
 #define ETH_HLEN	14		/* Total octets in header.	 */
