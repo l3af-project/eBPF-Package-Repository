@@ -144,38 +144,61 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
     void *data = (void *)(long)skb->data;
     void *data_end = (void *)(long)skb->data_end;
 
-    const int l3_off = ETH_HLEN; // IP header offset
-    const int l4_off = l3_off + sizeof(struct iphdr); // TCP header offset
-
     struct ethhdr *eth = data;
-    int l7_off;
 
-    if (data + sizeof(*eth) > data_end) {
+    if (data + sizeof(*eth) > data_end)
+    {
         return TC_ACT_OK;
     }
-    if (eth->h_proto != htons(ETH_P_IP)) {
+
+    if (eth->h_proto != htons(ETH_P_IP))
+    {
         return TC_ACT_OK; // Not an IPv4 packet, handover to kernel
-    } else if (eth->h_proto == htons(ETH_P_ARP)) {
+    }
+    else if (eth->h_proto == htons(ETH_P_ARP))
+    {
         return TC_ACT_OK;
     }
 
-    if (data + l4_off > data_end) {
-        return TC_ACT_OK; // Not our packet, handover to kernel
-    }
+    const int l3_off = ETH_HLEN; // IP header offset // equal to sizeof(*eth)
+
     struct iphdr *iph = (struct iphdr *)(data + l3_off);
 
-    if (iph->protocol == IPPROTO_TCP) {
-        l7_off = l4_off + sizeof(struct tcphdr); // L7 (e.g. HTTP) header offset
-    } else if (iph->protocol == IPPROTO_UDP) {
-        l7_off = l4_off + sizeof(struct udphdr); // L7 (e.g. HTTP) header offset
-    } else if (iph->protocol == IPPROTO_ICMP) {
-        l7_off =
-            l4_off + sizeof(struct icmphdr); // L7 (e.g. HTTP) header offset
-    } else {
+    const int l4_off = iph->ihl * 4; // TCP header offset
+
+    if (iph->ihl < 5 || iph->ihl > 15 || ((unsigned char *)iph + l4_off) > data_end)
+    {
+        return TC_ACT_OK; // Not our packet, handover to kernel
+    }
+
+    int data_off; // transport layer header length
+    if (iph->protocol == IPPROTO_TCP)
+    {
+        struct tcphdr *tcph = (struct tcphdr *)((unsigned char *)iph + l4_off);
+        data_off = tcph->doff * 4; // 20-60 bytes
+
+        if (tcph->doff < 5 || tcph->doff > 15)
+        {
+            return TC_ACT_OK; // Not our packet, handover to kernel
+        }
+    }
+    else if (iph->protocol == IPPROTO_UDP)
+    {
+        data_off = sizeof(struct udphdr); // 8 bytes
+    }
+    else if (iph->protocol == IPPROTO_ICMP)
+    {
+        data_off = sizeof(struct icmphdr); // 8 bytes
+    }
+    else
+    {
         return TC_ACT_OK;
     }
 
-    if (data + l7_off > data_end) {
+    void *thdr = ((unsigned char *)iph + l4_off); // transport layer header
+
+    if (thdr + data_off > data_end)
+    {
         return TC_ACT_OK; // Not our packet, handover to kernel
     }
 
@@ -219,11 +242,11 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
             if (iph->protocol == IPPROTO_ICMP) {
                 return bpf_clone_redirect(skb, *ifindex, 0);
             } else if (iph->protocol == IPPROTO_UDP) {
-                struct udphdr *udph = (struct udphdr *)(data + l4_off);
+                struct udphdr *udph = thdr;
                 fin_srcport = ntohs(udph->source);
                 fin_dstport = ntohs(udph->dest);
             } else if (iph->protocol == IPPROTO_TCP) {
-                struct tcphdr *tcph = (struct tcphdr *)(data + l4_off);
+                struct tcphdr *tcph = thdr;
                 fin_srcport = ntohs(tcph->source);
                 fin_dstport = ntohs(tcph->dest);
             } else {

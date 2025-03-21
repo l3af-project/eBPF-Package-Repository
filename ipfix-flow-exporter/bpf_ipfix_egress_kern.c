@@ -201,7 +201,7 @@ static void parse_port(void *trans_data, void *data_end, u8 proto,
         tcph = trans_data;
         u16 data_offset = tcph->doff * 4;
 
-        if (tcph->doff < 5 || ((unsigned char *)tcph + data_offset) > data_end)
+        if (tcph->doff < 5 || tcph->doff > 15 || ((unsigned char *)tcph + data_offset) > data_end)
             return;
 
         dstport = ntohs(tcph->dest);
@@ -255,7 +255,7 @@ void parse_ipv4(struct __sk_buff *skb, u64 l3_offset)
     u8 l4_offset = iph->ihl * 4; // ipv4 header length
 
     /* Check if it's a valid IPv4 packet */
-    if (iph->ihl < 5 || ((unsigned char *)iph + l4_offset) > data_end)
+    if (iph->ihl < 5 || iph->ihl > 15 || ((unsigned char *)iph + l4_offset) > data_end)
         return;
  
     void *thdr = ((unsigned char *)iph + l4_offset); // transport layer header

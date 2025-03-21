@@ -272,9 +272,9 @@ int _xdp_limit_conn(struct xdp_md *ctx)
     struct ethhdr *eth = data;
 
     /* Check if it is a valid ethernet packet */
-    if (data + sizeof(*eth)+ 1 > data_end)
+    if (data + sizeof(*eth) + 1 > data_end)
         return XDP_PASS;
-   
+
     uint16_t eth_type = eth->h_proto;
 
     /* Ignore other than IPV4 packets */
@@ -285,7 +285,7 @@ int _xdp_limit_conn(struct xdp_md *ctx)
     __u8 l4_offset = iph->ihl * 4; // ipv4 header length
 
     /* Check if it is a valid IPV4 packet */
-    if (iph->ihl < 5 || ((unsigned char *)iph + l4_offset) > data_end)
+    if (iph->ihl < 5 || iph->ihl > 15 || ((unsigned char *)iph + l4_offset) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP packets */
@@ -296,7 +296,7 @@ int _xdp_limit_conn(struct xdp_md *ctx)
     __u16 data_offset = tcph->doff * 4; // tcp header length
 
     /* Check if it is a valid TCP packet */
-    if (tcph->doff < 5 || ((unsigned char *)tcph + data_offset) > data_end)
+    if (tcph->doff < 5 || tcph->doff > 15 || ((unsigned char *)tcph + data_offset) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP-SYN packets */
