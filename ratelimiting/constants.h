@@ -8,9 +8,9 @@
 #define PATH_MAX        4096
 #endif
 
-#define DEFAULT_LOGFILE "/var/log/tb/l3af/ratelimiting.log"
+#define DEFAULT_LOGFILE "/var/log/l3af/ratelimiting.log"
 
-#define MAP_COUNT	5
+#define MAP_COUNT	6
 #define MAX_PORTS       50
 
 /* Path at which BPF maps are pinned */
@@ -18,24 +18,27 @@ const char *pin_basedir = "/sys/fs/bpf";
 const char *pin_subdir	= "ratelimiting";
 
 /* Map that stores the ratelimit configuration */
-const char *config_map = "/sys/fs/bpf/ratelimiting/rl_config_map";
+const char *rl_config_map = "rl_config_map";
 
 /* Map that maintains the window start timestamp and the connections received
  * in this window(next 1 sec). */
-const char *window_map = "/sys/fs/bpf/ratelimiting/rl_window_map";
+const char *rl_window_map = "rl_window_map";
 
 /* Map that mainatains total number of incoming connections */
-const char *recv_count_map = "/sys/fs/bpf/ratelimiting/rl_recv_count_map";
+const char *rl_recv_count_map = "rl_recv_count_map";
 
 /* Map that maintains the total number of dropped connnections as the *
  * ratelimit hits */
-const char *drop_count_map = "/sys/fs/bpf/ratelimiting/rl_drop_count_map";
+const char *rl_drop_count_map = "rl_drop_count_map";
+
+/* Map that stores the ports list */
+const char *rl_ports_map = "rl_ports_map";
 
 /* XDP program that would be injected in the kernel */
-const char *xdp_prog = "/sys/fs/bpf/ratelimiting/xdp_ratelimiting";
+const char *xdp_prog = "ratelimiting";
 
 /* XDP program that is next in the chain */
-const char *xdp_rl_ingress_next_prog = "/sys/fs/bpf/xdp_rl_ingress_next_prog";
+const char *xdp_rl_ingress_next_prog = "xdp_rl_ingress_next_prog";
 
 /* Buffer time(in sec) to hold the map elements, after which they get deleted */
 const int buffer_time = 10;

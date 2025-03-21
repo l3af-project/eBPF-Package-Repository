@@ -18,7 +18,7 @@
 #define DATE_LEN 21
 #define TIMESTAMP_LEN 64
 
-FILE *info;
+extern FILE *info;
 
 typedef enum log_level {
     LOG_OFF = 0,
@@ -35,7 +35,7 @@ typedef enum log_level {
 #define LOG_ERR_STR "ERR"
 #define LOG_CRIT_STR "CRIT"
 
-int verbosity ;
+extern int verbosity ;
 
 #define log_debug(...) { \
         if (verbosity != LOG_OFF && verbosity <= LOG_DEBUG) { \

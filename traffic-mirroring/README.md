@@ -75,7 +75,7 @@ Usage
 \--direction=ingress \\  
 \--map-name=\<location of the tc-root map for chaining\> \\  
 \--src-address=\<list of the source addresses (Use 0.0.0.0 for mirroring packets with "any" src IP)\> \\  
-\--tunnel-type=gue \\  
+\--tunnel-interface-name=gue1 \\  
 \--tunnel-local-port=\<local tunnel port\> \\  
 \--tunnel-remote-port=\<remote tunnel port\> \\  
 \--tunnel-remote-address=\<local tunnel IP address\> \\  
@@ -93,7 +93,7 @@ Usage
 \--direction=egress \\  
 \--map-name=\<location of the tc-root map for chaining\> \\  
 \--dst-address=\<list of the destination addresses (Use 0.0.0.0 for mirroring packets with "any" dst IP)\> \\  
-\--tunnel-type=gue \\  
+\--tunnel-interface-name=gue1 \\  
 \--tunnel-local-port=\<local tunnel port\> \\  
 \--tunnel-remote-port=\<remote tunnel port\> \\  
 \--tunnel-remote-address=\<local tunnel IP address\> \\  

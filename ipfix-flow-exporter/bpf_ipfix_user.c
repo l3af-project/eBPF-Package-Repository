@@ -7,18 +7,13 @@
 #define CMD_MAX 2048
 #define MAX_LENGTH 256
 
-const char* egress_bpf_map = "/sys/fs/bpf/tc/globals/egress_flow_record_info_map";
-const char* last_egress_bpf_map = "/sys/fs/bpf/tc/globals/last_egress_flow_record_info_map";
-const char* ingress_bpf_map = "/sys/fs/bpf/tc/globals/ingress_flow_record_info_map";
-const char* last_ingress_bpf_map = "/sys/fs/bpf/tc/globals/last_ingress_flow_record_info_map";
-const char* ipfix_ingress_jmp_table = "/sys/fs/bpf/tc/globals/ipfix_ingress_jmp_table";
-const char* ipfix_egress_jmp_table = "/sys/fs/bpf/tc/globals/ipfix_egress_jmp_table";
-const char* bpf_path = "/sys/fs/bpf/";
-const char* ingress_dir = "ingress";
-const char* egress_dir = "egress";
+const char* egress_bpf_map = "egress_flow_record_info_map";
+const char* last_egress_bpf_map = "last_egress_flow_record_info_map";
+const char* ingress_bpf_map = "ingress_flow_record_info_map";
+const char* last_ingress_bpf_map = "last_ingress_flow_record_info_map";
+const char* ipfix_ingress_jmp_table = "ipfix_ingress_jmp_table";
+const char* ipfix_egress_jmp_table = "ipfix_egress_jmp_table";
 
-int ipfix_export_ingress_local_port = 4755;
-int ipfix_export_egress_local_port = 4756;
 bool chain = false;
 char* remote_ip = NULL;
 char* bpf_map_file_path = NULL;
@@ -28,6 +23,7 @@ int bpf_map_fd = -1;
 int egress_fd = -1, last_egress_fd = -1, ingress_fd = -1, last_ingress_fd = -1;
 int flow_timeout_counter = 3;
 char *tc_cmd = "tc";
+int if_idx;
 
 const struct option long_options[] = {
     {"help",         no_argument, NULL, 'h' },
@@ -35,9 +31,7 @@ const struct option long_options[] = {
     {"collector_ip", required_argument, NULL, 'c' },
     {"direction", required_argument, NULL, 'd' },
     {"collector_port", required_argument, NULL, 'p' },
-    {"tc-remove",    optional_argument, NULL, 'r' },
     {"flow-timeout", optional_argument, NULL, 't' },
-    {"map-name", optional_argument, NULL, 'm' },
     {"verbose (allowed 0-4, 0-NO_LOG,1-LOG_DEBUG,2-LOG_INFO,3-LOG_WARN,4-LOG_ERR,5-LOG_CRIT)", optional_argument, NULL, 'q' },
     {0, 0, NULL,  0 }
 };
@@ -45,8 +39,8 @@ const struct option long_options[] = {
 const char* ingress_sec = "ingress_flow_monitoring";
 const char* egress_sec =  "egress_flow_monitoring";
 
-extern FILE *info;
-extern int verbosity;
+FILE *info;
+int verbosity;
 
 static flow_record_t *flow_rec_to_create_ipfix = NULL;
 
@@ -117,9 +111,9 @@ bool delete_inactive_flow(int flow_idle_counter, int map_fd, int last_map_fd, un
 int get_port(int dir) {
     int port = 0;
     if (dir == INGRESS)
-	 port = ipfix_export_ingress_local_port;
+	 port = IPFIX_EXPORT_INGRESS_LOCAL_PORT ;
     else if (dir == EGRESS)
-	 port = ipfix_export_egress_local_port;
+	 port = IPFIX_EXPORT_EGRESS_LOCAL_PORT ;
 
     return port;
 }
@@ -185,120 +179,6 @@ bool process_flow_record_map(int map_fd, int last_map_fd, int dir)
     return ipfix_required;
 }
 
-int exec_cmd(char* cmd[]) {
-    int pid, status, ret = 0;
-    pid = fork();
-    if(pid > 0) {
-        waitpid(pid, &status, 0);
-        if(WIFEXITED(status))  {
-            log_info("Child process exited with status %d", status);
-        }
-    } else if(pid == 0) {
-        ret = execvp(cmd[0], cmd) ;
-        if( ret < 0) {
-            perror("Command execution failed");
-            return ret;
-        }
-    }
-    return ret;
-}
-
-int validate_filter_args(const char* dev)
-{
-    int ret = 1;
-    if (!validate_str(dev))
-        return 0;
-    return ret;
-}
-
-int tc_attach_filter(const char* dev, const char* bpf_obj, int dir, const char* sec)
-{
-    int ret = 1;
-    char *direction;
-    /* If chaining is not enabled, add qdisc */
-    ret = validate_filter_args(dev);
-    if (!ret)
-        return 0;
-
-    if(chain != true) {
-        char *qdisc_cmd[] = {tc_cmd , "qdisc", "add", "dev", (void *)dev, "clsact", (char*)0};
-        ret = exec_cmd(qdisc_cmd) ;
-        /* Ignoring error, in case qdisc already added by any other process*/
-        if( ret < 0)
-            log_err("tc qdisc add failed");
-    }
-
-    if(dir == INGRESS) {
-        direction = (void *)ingress_dir;
-    } else {
-        direction = (void *)egress_dir;
-    }
-
-    char *filter_cmd[] = {tc_cmd, "filter", "add", "dev", (void *)dev, direction,
-                          "prio", "1", "handle", "1", "bpf", "da", "obj",
-                           (void *)bpf_obj, "sec", (void *)sec, (char*)0};
-
-    /* Attach tc filter */
-    ret = exec_cmd(filter_cmd) ;
-    if( ret < 0) {
-        /* Exit with failed status*/
-        perror("tc filter attach failed");
-	close_logfile();
-        exit(EXIT_FAILURE);
-    }
-    return 1;
-}
-
-int tc_cmd_filter(const char* dev, int dir, const char* action)
-{
-    int ret = 0;
-    const char *direction;
-
-    if(dir == INGRESS) {
-        direction = ingress_dir;
-    } else {
-        direction = egress_dir;
-    }
-    if (!validate_str(direction))
-        return 0;
-
-    char* filter_cmd[] = {tc_cmd, "filter", (void *)action, "dev", (void *)dev, (void *)direction, (char*)0};
-    /* Attach tc filter */
-    ret = exec_cmd(filter_cmd) ;
-    if( ret < 0) {
-        /* Exit with failed status*/
-        perror("tc filter attach failed");
-        close_logfile();
-        exit(EXIT_FAILURE);
-    }
-    return ret;
-}
-
-int tc_remove_filter(const char* dev, int dir)
-{
-    int ret = 0;
-    const char *act = "del";
-    ret = tc_cmd_filter(dev, dir, act);
-    return ret;
-}
-
-// This method to unlink the program
-int tc_remove_bpf(const char *map_filename) {
-     int ret;
-     int key = 0;
-     int map_fd = bpf_obj_get(map_filename);
-     if (map_fd < 0) {
-         fprintf(stderr, "ERROR: map_fd of map not found: %s\n", strerror(map_fd));
-         return -1;
-     }
-
-     ret = bpf_map_delete_elem(map_fd, &key);
-     if (ret != 0) {
-         fprintf(stderr, "ERROR(%d): tc chain remove program failed \n", ret);
-     }
-     return ret;
-}
-
 bool validate_ifname(const char* input_ifname, char *output_ifname)
 {
     size_t len;
@@ -312,7 +192,7 @@ bool validate_ifname(const char* input_ifname, char *output_ifname)
     for (i = 0; i < len; i++) {
         char c = input_ifname[i];
 
-        if (!(isalpha(c) || isdigit(c)))
+        if (!(isalpha(c) || isdigit(c) || c == '-'))
             return false;
     }
     iface = (void *)input_ifname;
@@ -457,66 +337,6 @@ FILE* set_logfile(const char *file_name) {
     return info;
 }
 
-int validate_chain_args(const char *map_name) {
-    int ret = 1;
-    if (!validate_map_name(map_name)) {
-        return 0;
-    }
-    return ret;
-}
-
-int  tc_chain_bpf(const char *map_name, const char *bpf_obj, const char *sec) {
-    int ret = 1;
-    ret = validate_chain_args(map_name);
-    if(!ret)
-        return 0;
-
-    char *cmd[] = {"/sbin/tc" , "exec", "bpf", "graft", (void *)map_name, "key",
-                   "0", "obj", (void *)bpf_obj, "sec", (void *)sec, (char*)0};
-
-    /* Attach tc graft */
-    ret = exec_cmd(cmd) ;
-    if( ret < 0) {
-        /* Exit with failed status*/
-        perror("tc exec bpf graft failed");
-        close_logfile();
-        exit(EXIT_FAILURE);
-    }
-    return 1;
-}
-
-void tc_cleanup( bool chain, char *if_name, int dir,
-		 const char* bpf_map,
-		 const char* last_bpf_map,
-		 char* bpf_map_file_path,
-		 const char* ipfix_jmp_table) {
-    int ret = 0;
-    if (remove(last_bpf_map) < 0)
-        fprintf(stderr, "Failed to remove map file - last_bpf_map\n");
-    if (remove(bpf_map) < 0)
-        fprintf(stderr, "Failed to remove map file - bpf_map\n");
-    if (remove(ipfix_jmp_table) < 0)
-        fprintf(stderr, "Failed to remove map file - ipfix_jmp_table\n");
-
-    if (!chain) {
-        ret = tc_remove_filter(if_name, dir);
-        if(ret) {
-	    fprintf(stderr,"ERR(%d): tc remove filter failed \n",
-                WEXITSTATUS(ret));
-	}
-    }
-    else {
-        ret = tc_remove_bpf(bpf_map_file_path);
-        if(ret) {
-	    fprintf(stderr,"ERR(%d): tc remove filter failed \n",
-                WEXITSTATUS(ret));
-	}
-    }
-    if (bpf_map_file_path != NULL)
-        free(bpf_map_file_path);
-    return;
-}
-
 void flow_record_poll(int map_fd, int last_map_fd, int dir)
 {
     bool ipfix_required = false;
@@ -559,4 +379,24 @@ int get_length(const char *str)
        len++;
 
    return len;
+}
+
+/* Map filepath is created by l3afd */
+int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file)
+{
+    snprintf(map_file, MAP_PATH_SIZE, "%s/%s/%s", map_base_dir, ifname, map_name);
+    log_info("map path filename %s", map_file);
+    struct stat st = {0};
+    if (stat(map_file, &st) != 0) {
+        return -1;
+    }
+    return 0;
+}
+
+/* Close a file fd */
+void close_fd(int fd){
+  if(fd >= 0){
+     close(fd);
+  }
+  return;
 }

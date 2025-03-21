@@ -4,9 +4,8 @@
 #ifndef MIRRORING_H
 #define MIRRORING_H
 
-#define PATH_MAX          4096
+#define MAP_PATH_SIZE     4096
 #define CMD_MAX           2048
-#define CMD_MAX_TC        256
 #define MAX_IPV4_PREFIX   32
 #define DECIMAL_BASE      10
 #define MAP_PATH_MAX      1024
@@ -15,6 +14,7 @@
 #define DEFAULT_LOGFILE   "/var/log/l3af/mirroring.log"
 #define LOG_PATH          "/var/log/l3af/"
 #define NLMSG_TAIL(nmsg) ((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
+#define MAX_ADDRESSES 50
 
 typedef struct network_addr {
     char addr[20];
@@ -46,30 +46,27 @@ struct route_config {
     char *nic_name;
     int nic_id;
     char *type;
-    char *encap_type;
+    char *encap_interface_name;
 };
 
-static const char *redirect_mapfile = "/sys/fs/bpf/tc/globals/redirect_iface";
-static const char *src_mapfile = "/sys/fs/bpf/tc/globals/src_address";
-static const char *dst_mapfile = "/sys/fs/bpf/tc/globals/dst_address";
+static const char *redirect_mapfile = "redirect_iface";
+static const char *src_mapfile = "src_address";
+static const char *dst_mapfile = "dst_address";
 
-static const char *ingress_src_port_mapfile = "/sys/fs/bpf/tc/globals/ingress_src_port";
-static const char *ingress_dst_port_mapfile = "/sys/fs/bpf/tc/globals/ingress_dst_port";
+static const char *ingress_src_port_mapfile = "ingress_src_port";
+static const char *ingress_dst_port_mapfile = "ingress_dst_port";
 
-static const char *egress_src_port_mapfile = "/sys/fs/bpf/tc/globals/egress_src_port";
-static const char *egress_dst_port_mapfile = "/sys/fs/bpf/tc/globals/egress_dst_port";
+static const char *egress_src_port_mapfile = "egress_src_port";
+static const char *egress_dst_port_mapfile = "egress_dst_port";
 
-static const char *ingress_proto_mapfile = "/sys/fs/bpf/tc/globals/ingress_proto";
-static const char *egress_proto_mapfile = "/sys/fs/bpf/tc/globals/egress_proto";
+static const char *ingress_proto_mapfile = "ingress_proto";
+static const char *egress_proto_mapfile = "egress_proto";
 
-static const char *ingress_any_mapfile = "/sys/fs/bpf/tc/globals/ingress_any";
-static const char *egress_any_mapfile = "/sys/fs/bpf/tc/globals/egress_any";
-
-static char map_file[MAP_PATH_MAX];
-static bool chain = false;
+static const char *ingress_any_mapfile = "ingress_any";
+static const char *egress_any_mapfile = "egress_any";
+static const char map_base_dir[] = "/sys/fs/bpf/tc/globals";
 static int verbose = 1;
 
-static int tc_attach_bpf(char* dev, char* bpf_obj, char* dir);
 static bool validate_ifname(const char* input_ifname, char *output_ifname);
 static bool validate_address(char* input_address, network_addr_t output_address[], int *count);
 
@@ -85,10 +82,11 @@ void cpy(char* dst, char* src);
 int rtattr_add(struct nlmsghdr *n, int maxlen, int type, const void *data, int alen);
 int do_route(int socket, int cmd, int flags, _inet_addr *remote_ip, _inet_addr *gateway_ip, int nic_id);
 int open_netlink(void);
-int exec_cmd(char *cmd[]);
-int exec_shell(struct route_config *r);
 int nl_update_route(struct route_config r, int c);
 bool validate_netlink(struct route_config *r);
 bool validate_str(const char* input);
 bool validate_map_name(char *path);
+void closeFd(int fd);
+void cleanup(void);
+void close_logfile(void);
 #endif

@@ -5,18 +5,12 @@ BPF_SAMPLES_PATH := $(LINUX_SRC_PATH)/samples/bpf
 TOOLS_PATH := $(BPF_SAMPLES_PATH)/../../tools
 L3AF_SRC_PATH := $(CURDIR)
 
-# List of programs to build
-tprogs-y := tcprog
-
 # Libbpf dependencies
 LIBBPF = $(TOOLS_PATH)/lib/bpf/libbpf.a
 
-tcprog-objs := tcprog_user.o 
-
 # Tell kbuild to always build the programs
 always-y := $(tprogs-y)
-always-y += tcprog_ingress.bpf.o
-always-y += tcprog_egress.bpf.o
+always-y += kretprobe.bpf.o
 
 
 ifeq ($(ARCH), arm)
@@ -99,12 +93,20 @@ endif
 endif
 
 # Trick to allow make to be run from this directory
-all:build
+all:build tar.zip
 build:
 	if [ ! -f $(L3AF_SRC_PATH)/vmlinux.h ]; then \
 		bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(L3AF_SRC_PATH)/vmlinux.h; \
-        fi
+    fi
 	$(MAKE) -C $(LINUX_SRC_PATH) M=$(L3AF_SRC_PATH)
+
+tar.zip:
+	@rm -rf l3af_kretprobe
+	@rm -f l3af_kretprobe.tar.gz
+	@mkdir l3af_kretprobe
+	@cp $(L3AF_SRC_PATH)/kretprobe.bpf.o ./l3af_kretprobe
+	@tar -cvf l3af_kretprobe.tar ./l3af_kretprobe
+	@gzip l3af_kretprobe.tar
 
 clean:
 	$(MAKE) -C $(LINUX_SRC_PATH) M=$(L3AF_SRC_PATH) clean
@@ -177,7 +179,7 @@ endef
 CLANG_SYS_INCLUDES = $(call get_sys_includes,$(CLANG))
 
 
-$(obj)/%.bpf.o: $(src)/%.bpf.c $(BPF_SAMPLES_PATH)/xdp_sample.bpf.h $(BPF_SAMPLES_PATH)/xdp_sample_shared.h 
+$(obj)/%.bpf.o: $(src)/%.bpf.c $(BPF_SAMPLES_PATH)/xdp_sample.bpf.h $(BPF_SAMPLES_PATH)/xdp_sample_shared.h
 	@echo "  CLANG-BPF " $@
 	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(SRCARCH) \
 		-Wno-compare-distinct-pointer-types -I$(srctree)/include \

@@ -4,6 +4,7 @@
 #ifndef BPF_IPFIX_KERN_COMMON_H
 #define BPF_IPFIX_KERN_COMMON_H
 
+#define MAX_RECORDS 30000
 typedef struct flow_key_ {
     u32 sa;
     u32 da;
@@ -11,7 +12,6 @@ typedef struct flow_key_ {
     u16 dp;
     u8 prot;
 }flow_key_t;
-
 
 typedef struct flow_record_ {
     flow_key_t key;                 /* identifies flow by 5-tuple */
@@ -31,16 +31,48 @@ typedef struct flow_record_ {
     u16 counter;                    /* flow_idle_counter */
 } flow_record_t;
 
-struct bpf_elf_map {
-    __u32 type;
-    __u32 size_key;
-    __u32 size_value;
-    __u32 max_elem;
-    __u32 flags;
-    __u32 id;
-    __u32 pinning;
-};
+void *memset(void *b, int c, unsigned long len)
+{
+  if (b == NULL || len <= 0)
+      return b;
+  unsigned char *ptr = b;
+   while(*ptr != '\0' && len--)
+    {
+      *ptr++ = (unsigned char)c;
+    }
+  return(b);
+}
 
 #define flow_key_hash_mask 0x000fffff
 
 #endif
+
+struct update_flow_record_args {
+    flow_record_t *flow_rec_from_map;
+    flow_key_t flow_key;
+    u16 pckt_size;
+    u16 control_bit;
+    u8 tos;
+    u16 icmp_type;
+    u8 ttl;
+    u32 hash_key;
+};
+
+struct create_flow_record_args {
+    flow_key_t flow_key;
+    u16 pckt_size;
+    u16 control_bit;
+    u8 tos;
+    u16 icmp_type;
+    u8 ttl;
+    u32 hash_key;
+};
+
+struct parse_port_args {
+    void *trans_data;
+    void *data_end;
+    u8 proto;
+    u32 *dport;
+    u32 *sport;
+    u16 *control_bit;
+};

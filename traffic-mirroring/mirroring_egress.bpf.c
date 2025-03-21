@@ -7,107 +7,84 @@
  *          use the 'tc' cmdline tool from iproute2 for loading and
  *          attaching bpf programs.
  */
-#include <uapi/linux/bpf.h>
-#include <uapi/linux/if_ether.h>
-#include <uapi/linux/if_packet.h>
-#include <uapi/linux/if_vlan.h>
-#include <uapi/linux/ip.h>
-#include <uapi/linux/in.h>
-#include <uapi/linux/tcp.h>
-#include <uapi/linux/udp.h>
-#include <uapi/linux/icmp.h>
-
-#include <uapi/linux/pkt_cls.h>
-#include <linux/skbuff.h>
+#include "vmlinux.h"
 #include "bpf_helpers.h"
-
+#include "bpf_endian.h"
+#include "bpf/bpf.h"
+#define ETH_P_IP	0x0800		/* Internet Protocol packet	*/
+#define ETH_P_ARP	0x0806		/* Address Resolution packet	*/
+#define ETH_HLEN	14		/* Total octets in header.	 */
+#define TC_ACT_OK		0
 #define bpf_printk(fmt, ...)                                       \
     ({                                                             \
         char ____fmt[] = fmt;                                      \
         bpf_trace_printk(____fmt, sizeof(____fmt), ##__VA_ARGS__); \
     })
 
-/* Notice: TC and iproute2 bpf-loader uses another elf map layout */
-struct bpf_elf_map {
-    __u32 type;
-    __u32 size_key;
-    __u32 size_value;
-    __u32 max_elem;
-    __u32 flags;
-    __u32 id;
-    __u32 pinning;
-};
-
 struct daddr_key {
     __u32 prefix_len;
     __u8 data[4];
 };
 
-/* TODO: Describe what this PIN_GLOBAL_NS value 2 means???
- *
- * A file is automatically created here:
- *  /sys/fs/bpf/tc/globals/egress
- */
-#define PIN_GLOBAL_NS 2
 #define MAX_ADDRESSES 50
 #define KEY_SIZE_IPV4 sizeof(struct bpf_lpm_trie_key) + sizeof(__u32)
 
-struct bpf_elf_map SEC("maps") redirect_iface = {
-    .type = BPF_MAP_TYPE_ARRAY,
-    .size_key = sizeof(int),
-    .size_value = sizeof(int),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 2,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __type(key, int);
+    __type(value, int);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} redirect_iface SEC(".maps");
 
-struct bpf_elf_map SEC("maps") egress_any = {
-    .type = BPF_MAP_TYPE_ARRAY,
-    .size_key = sizeof(int),
-    .size_value = sizeof(int),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 2
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __type(key, int);
+    __type(value, int);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} egress_any SEC(".maps");
 
-struct bpf_elf_map SEC("maps") dst_address = {
-    .type = BPF_MAP_TYPE_LPM_TRIE,
-    .size_key = KEY_SIZE_IPV4,
-    .size_value = sizeof(__u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = MAX_ADDRESSES,
-    .flags = BPF_F_NO_PREALLOC,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_LPM_TRIE);
+    __type(key, KEY_SIZE_IPV4);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+    __uint(map_flags, BPF_F_NO_PREALLOC);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} dst_address SEC(".maps");
 
-struct bpf_elf_map SEC("maps") egress_src_port = {
-    .type = BPF_MAP_TYPE_HASH,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} egress_src_port SEC(".maps");
 
-struct bpf_elf_map SEC("maps") egress_dst_port = {
-    .type = BPF_MAP_TYPE_HASH,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} egress_dst_port SEC(".maps");
 
-struct bpf_elf_map SEC("maps") egress_proto = {
-    .type = BPF_MAP_TYPE_HASH,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 50
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, MAX_ADDRESSES);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} egress_proto SEC(".maps");
 
-struct bpf_elf_map SEC("maps") mirroring_egress_jmp_table = {
-    .type = BPF_MAP_TYPE_PROG_ARRAY,
-    .size_key = sizeof(u32),
-    .size_value = sizeof(u32),
-    .pinning = PIN_GLOBAL_NS,
-    .max_elem = 1
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} mirroring_egress_jmp_table SEC(".maps");
 
 /* Notice this section name is used when attaching TC filter
  *
@@ -133,7 +110,7 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
 
     int *ifindex;
     int *ifany;
-    int iface_key = 1;
+    int iface_key = 0;
 
     /* Lookup what ifindex to redirect packets to */
     ifindex = bpf_map_lookup_elem(&redirect_iface, &iface_key);
@@ -144,61 +121,38 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
     void *data = (void *)(long)skb->data;
     void *data_end = (void *)(long)skb->data_end;
 
+    const int l3_off = ETH_HLEN; // IP header offset
+    const int l4_off = l3_off + sizeof(struct iphdr); // TCP header offset
+
     struct ethhdr *eth = data;
+    int l7_off;
 
-    if (data + sizeof(*eth) > data_end)
-    {
+    if (data + sizeof(*eth) > data_end) {
         return TC_ACT_OK;
     }
-
-    if (eth->h_proto != htons(ETH_P_IP))
-    {
+    if (eth->h_proto != bpf_htons(ETH_P_IP)) {
         return TC_ACT_OK; // Not an IPv4 packet, handover to kernel
-    }
-    else if (eth->h_proto == htons(ETH_P_ARP))
-    {
+    } else if (eth->h_proto == bpf_htons(ETH_P_ARP)) {
         return TC_ACT_OK;
     }
 
-    const int l3_off = ETH_HLEN; // IP header offset // equal to sizeof(*eth)
-
-    struct iphdr *iph = (struct iphdr *)(data + l3_off);
-
-    const int l4_off = iph->ihl * 4; // TCP header offset
-
-    if (iph->ihl < 5 || iph->ihl > 15 || ((unsigned char *)iph + l4_off) > data_end)
-    {
+    if (data + l4_off > data_end) {
         return TC_ACT_OK; // Not our packet, handover to kernel
     }
+    struct iphdr *iph = (struct iphdr *)(data + l3_off);
 
-    int data_off; // transport layer header length
-    if (iph->protocol == IPPROTO_TCP)
-    {
-        struct tcphdr *tcph = (struct tcphdr *)((unsigned char *)iph + l4_off);
-        data_off = tcph->doff * 4; // 20-60 bytes
-
-        if (tcph->doff < 5 || tcph->doff > 15)
-        {
-            return TC_ACT_OK; // Not our packet, handover to kernel
-        }
-    }
-    else if (iph->protocol == IPPROTO_UDP)
-    {
-        data_off = sizeof(struct udphdr); // 8 bytes
-    }
-    else if (iph->protocol == IPPROTO_ICMP)
-    {
-        data_off = sizeof(struct icmphdr); // 8 bytes
-    }
-    else
-    {
+    if (iph->protocol == IPPROTO_TCP) {
+        l7_off = l4_off + sizeof(struct tcphdr); // L7 (e.g. HTTP) header offset
+    } else if (iph->protocol == IPPROTO_UDP) {
+        l7_off = l4_off + sizeof(struct udphdr); // L7 (e.g. HTTP) header offset
+    } else if (iph->protocol == IPPROTO_ICMP) {
+        l7_off =
+            l4_off + sizeof(struct icmphdr); // L7 (e.g. HTTP) header offset
+    } else {
         return TC_ACT_OK;
     }
 
-    void *thdr = ((unsigned char *)iph + l4_off); // transport layer header
-
-    if (thdr + data_off > data_end)
-    {
+    if (data + l7_off > data_end) {
         return TC_ACT_OK; // Not our packet, handover to kernel
     }
 
@@ -221,13 +175,13 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
     //      2th bit True: allow all/any destination port
     ifany = bpf_map_lookup_elem(&egress_any, &iface_key);
     if (ifany) {
-        if (((*ifany) >> (0)) % 2 == 1) {
+        if (((*ifany) >> (0)) & 1) {
             allow_all_ip = true;
         }
-        if (((*ifany) >> (1)) % 2 == 1) {
+        if (((*ifany) >> (1)) & 1) {
             allow_all_src_ports = true;
         }
-        if (((*ifany) >> (2)) % 2 == 1) {
+        if (((*ifany) >> (2)) & 1) {
             allow_all_dst_ports = true;
         }
     }
@@ -242,13 +196,13 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
             if (iph->protocol == IPPROTO_ICMP) {
                 return bpf_clone_redirect(skb, *ifindex, 0);
             } else if (iph->protocol == IPPROTO_UDP) {
-                struct udphdr *udph = thdr;
-                fin_srcport = ntohs(udph->source);
-                fin_dstport = ntohs(udph->dest);
+                struct udphdr *udph = (struct udphdr *)(data + l4_off);
+                fin_srcport = bpf_ntohs(udph->source);
+                fin_dstport = bpf_ntohs(udph->dest);
             } else if (iph->protocol == IPPROTO_TCP) {
-                struct tcphdr *tcph = thdr;
-                fin_srcport = ntohs(tcph->source);
-                fin_dstport = ntohs(tcph->dest);
+                struct tcphdr *tcph = (struct tcphdr *)(data + l4_off);
+                fin_srcport = bpf_ntohs(tcph->source);
+                fin_dstport = bpf_ntohs(tcph->dest);
             } else {
                 return TC_ACT_OK;
             }
@@ -277,7 +231,7 @@ static __always_inline int egress_redirect(struct __sk_buff *skb)
     return TC_ACT_OK;
 }
 
-SEC("egress_redirect")
+SEC("tc_egress_redirect")
 int _egress_redirect(struct __sk_buff *skb)
 {
     int ret;

@@ -1,61 +1,15 @@
 // Copyright Contributors to the L3AF Project.
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
-#include <uapi/linux/bpf.h>
-#include <uapi/linux/if_ether.h>
-#include <uapi/linux/if_packet.h>
-#include <uapi/linux/if_vlan.h>
-#include <uapi/linux/ip.h>
-#include <uapi/linux/in.h>
-#include <uapi/linux/tcp.h>
-#include <uapi/linux/icmp.h>
-#include <uapi/linux/udp.h>
-#include <uapi/linux/pkt_cls.h>
+#define KBUILD_MODNAME "foo"
 
+#include "vmlinux.h"
 #include "bpf_helpers.h"
+#include "bpf_endian.h"
 #include "bpf_ipfix_kern_common.h"
-
 #define DEBUG 1
 #define INGRESS 0
 #define ICMP 1
-
-#define bpf_printk(fmt, ...)                                    \
-({                                                              \
-               char ____fmt[] = fmt;                            \
-               bpf_trace_printk(____fmt, sizeof(____fmt),       \
-                                ##__VA_ARGS__);                 \
-})
-
-#define PIN_GLOBAL_NS 2
-#define PIN_OBJECT_NS  1
-
-
-/* INGRESS MAP FOR FLOW RECORD INFO */
-struct bpf_elf_map SEC("maps")  ingress_flow_record_info_map = {
-    .type           = BPF_MAP_TYPE_HASH,
-    .size_key       = sizeof(u32),
-    .size_value     = sizeof(flow_record_t),
-    .pinning        = PIN_GLOBAL_NS,
-    .max_elem       = 30000,
-};
-
-/* INGRESS MAP FOR LAST RECORD PACKET INFO */
-struct bpf_elf_map SEC("maps")  last_ingress_flow_record_info_map = {
-    .type           = BPF_MAP_TYPE_HASH,
-    .size_key       = sizeof(u32),
-    .size_value     = sizeof(flow_record_t),
-    .pinning        = PIN_GLOBAL_NS,
-    .max_elem       = 30000,
-};
-
-/* INGRESS MAP FOR CHAINING */
-struct bpf_elf_map SEC("maps") ipfix_ingress_jmp_table = {
-        .type = BPF_MAP_TYPE_PROG_ARRAY,
-        .size_key = sizeof(u32),
-        .size_value = sizeof(u32),
-        .pinning = PIN_GLOBAL_NS,
-        .max_elem = 1
-};
 
 #define TCP_FIN  0x01
 #define TCP_SYN  0x02
@@ -65,6 +19,7 @@ struct bpf_elf_map SEC("maps") ipfix_ingress_jmp_table = {
 #define TCP_URG  0x20
 #define TCP_ECE  0x40
 #define TCP_CWR  0x80
+#define TC_ACT_OK 0
 
 #define TH_FIN 0x0001
 #define TH_SYN 0x0002
@@ -76,67 +31,95 @@ struct bpf_elf_map SEC("maps") ipfix_ingress_jmp_table = {
 #define TH_CWR 0x0080
 
 #define TCP_FLAGS (TCP_FIN|TCP_SYN|TCP_RST|TCP_ACK|TCP_URG|TCP_ECE|TCP_CWR)
+#define ETH_P_ARP	0x0806		/* Address Resolution packet	*/
+#define ETH_P_IPV6	0x86DD		/* IPv6 over bluebook		*/
+#define ETH_P_IP	0x0800		/* Internet Protocol packet	*/
+
+/* INGRESS MAP FOR FLOW RECORD INFO */
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, flow_record_t);
+    __uint(max_entries, MAX_RECORDS);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} ingress_flow_record_info_map SEC(".maps");
+
+
+/* INGRESS MAP FOR LAST RECORD PACKET INFO */
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, flow_record_t);
+    __uint(max_entries, MAX_RECORDS);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} last_ingress_flow_record_info_map SEC(".maps");
+
+/* INGRESS MAP FOR CHAINING */
+struct {
+    __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+    __type(key, u32);
+    __type(value, u32);
+    __uint(max_entries, 1);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} ipfix_ingress_jmp_table SEC(".maps");
 
 static u32 flow_key_hash (const flow_key_t f) {
     u32 hash_val = (((u32)f.sa * 0xef6e15aa)
                 ^((u32)f.da * 0x65cd52a0)
                 ^ ((u32)f.sp * 0x8216)
                 ^ ((u32)f.dp * 0xdda37)
-                ^ ((u32)f.prot * 0xbc06)) ;
+                ^ ((u32)f.prot * 0xbc06));
     return hash_val;
 }
 
-static void update_flow_record(flow_record_t *flow_rec_from_map, flow_key_t flow_key,
-                               u16 pckt_size, u16 control_bit, u8 tos, u16 icmp_type,
-                               u8 ttl, u32 hash_key)
+static void update_flow_record(struct update_flow_record_args *args)
 {
     flow_record_t flow_rec ;
     memset(&flow_rec, 0, sizeof(flow_record_t));
 
-    flow_rec.key = flow_rec_from_map->key;
-    flow_rec.np = flow_rec_from_map->np + 1 ;
-    flow_rec.nb = flow_rec_from_map->nb + pckt_size;
+    flow_rec.key = args->flow_rec_from_map->key;
+    flow_rec.np = args->flow_rec_from_map->np + 1 ;
+    flow_rec.nb = args->flow_rec_from_map->nb + args->pckt_size;
     flow_rec.flow_end = bpf_ktime_get_ns();
-    flow_rec.flow_start = flow_rec_from_map->flow_start;
-    flow_rec.tcp_control_bits = control_bit | flow_rec_from_map->tcp_control_bits ;
-    flow_rec.tos = tos | flow_rec_from_map->tos ;
-    flow_rec.icmp_type = icmp_type | flow_rec_from_map->icmp_type ;
-    flow_rec.min_ttl = flow_rec_from_map->min_ttl;
-    flow_rec.max_ttl = flow_rec_from_map->max_ttl;
+    flow_rec.flow_start = args->flow_rec_from_map->flow_start;
+    flow_rec.tcp_control_bits = args->control_bit | args->flow_rec_from_map->tcp_control_bits ;
+    flow_rec.tos = args->tos | args->flow_rec_from_map->tos ;
+    flow_rec.icmp_type = args->icmp_type | args->flow_rec_from_map->icmp_type ;
+    flow_rec.min_ttl = args->flow_rec_from_map->min_ttl;
+    flow_rec.max_ttl = args->flow_rec_from_map->max_ttl;
 
-    if(ttl > flow_rec_from_map->max_ttl)
-        flow_rec.max_ttl = ttl;
-    else if (ttl < flow_rec_from_map->min_ttl)
-        flow_rec.min_ttl = ttl;
+    if(args->ttl > args->flow_rec_from_map->max_ttl)
+        flow_rec.max_ttl = args->ttl;
+    else if (args->ttl < args->flow_rec_from_map->min_ttl)
+        flow_rec.min_ttl = args->ttl;
 
     flow_rec.dir = INGRESS;
-    if(bpf_map_update_elem(&ingress_flow_record_info_map, &hash_key, &flow_rec, BPF_ANY) != 0)
+    if(bpf_map_update_elem(&ingress_flow_record_info_map, &args->hash_key, &flow_rec, BPF_ANY) != 0)
         return;
 
     return;
 }
 
-static void create_flow_record(flow_key_t flow_key, u16 pckt_size, u16 control_bit, u8 tos,
-                               u16 icmp_type, u8 ttl, u32 hash_key)
+static void create_flow_record(struct create_flow_record_args *args)
 {
     flow_record_t flow_rec ;
     memset(&flow_rec, 0, sizeof(flow_record_t));
 
-    flow_rec.key = flow_key ;
+    flow_rec.key = args->flow_key ;
     flow_rec.np = 1 ;
-    flow_rec.nb = pckt_size;
+    flow_rec.nb = args->pckt_size;
     flow_rec.flow_start = bpf_ktime_get_ns();
     flow_rec.flow_end = bpf_ktime_get_ns();
-    flow_rec.tcp_control_bits = control_bit;
-    flow_rec.tos = tos ;
-    flow_rec.icmp_type = icmp_type;
-    flow_rec.min_ttl = ttl;
-    flow_rec.max_ttl = ttl;
+    flow_rec.tcp_control_bits = args->control_bit;
+    flow_rec.tos = args->tos ;
+    flow_rec.icmp_type = args->icmp_type;
+    flow_rec.min_ttl = args->ttl;
+    flow_rec.max_ttl = args->ttl;
     flow_rec.counter = 0;
 
     flow_rec.dir = INGRESS;
 
-    if(bpf_map_update_elem(&ingress_flow_record_info_map, &hash_key, &flow_rec, BPF_ANY) != 0)
+    if(bpf_map_update_elem(&ingress_flow_record_info_map, &args->hash_key, &flow_rec, BPF_ANY) != 0)
             return;
     return;
 }
@@ -154,10 +137,27 @@ void process_flow(flow_key_t flow_key, u16 pckt_size,
     flow_rec_from_map = bpf_map_lookup_elem(&ingress_flow_record_info_map, &hash_key);
 
     if(flow_rec_from_map != NULL){
-        update_flow_record(flow_rec_from_map, flow_key, pckt_size, control_bit, tos, icmp_type, ttl, hash_key);
+        struct update_flow_record_args update_flow_args;
+        update_flow_args.flow_rec_from_map = flow_rec_from_map;
+        update_flow_args.flow_key = flow_key;
+        update_flow_args.pckt_size = pckt_size;
+        update_flow_args.control_bit = control_bit;
+        update_flow_args.tos = tos;
+        update_flow_args.icmp_type = icmp_type;
+        update_flow_args.ttl = ttl;
+        update_flow_args.hash_key = hash_key;
+        update_flow_record(&update_flow_args);
     }
     else{
-        create_flow_record(flow_key, pckt_size, control_bit, tos, icmp_type, ttl, hash_key);
+        struct create_flow_record_args create_flow_args;
+        create_flow_args.flow_key = flow_key;
+        create_flow_args.pckt_size = pckt_size;
+        create_flow_args.control_bit = control_bit;
+        create_flow_args.tos = tos;
+        create_flow_args.icmp_type = icmp_type;
+        create_flow_args.ttl = ttl;
+        create_flow_args.hash_key = hash_key;
+        create_flow_record(&create_flow_args);
     }
 }
 
@@ -175,35 +175,31 @@ static void parse_icmp_type(void *icmp_data,void *data_end, u16 *icmp_type){
     return;
 }
 
-static void parse_port(void *trans_data, void *data_end, u8 proto,
-                       u32 *dport, u32 *sport, u16 *control_bit)
+static void parse_port(struct parse_port_args *args)
 {
-    struct udphdr *udph;   // size = 8 bytes
-    struct tcphdr *tcph;   // size = 20-60 bytes
+    struct udphdr *udph;
+    struct tcphdr *tcph;
 
     u32 dstport = 0;
     u32 srcport = 0;
     u16 controlbit = 0;
 
-    switch (proto) {
+    switch (args->proto) {
     case IPPROTO_UDP:
-        udph = trans_data;
-
-        if (udph + 1 > data_end)
+        udph = args->trans_data;
+        if (udph + 1 > args->data_end) {
             return;
-        
-        dstport = ntohs(udph->dest);
-        srcport = ntohs(udph->source);
+        }
+        dstport = bpf_ntohs(udph->dest);
+        srcport = bpf_ntohs(udph->source);
         break;
     case IPPROTO_TCP:
-        tcph = trans_data;
-        u16 data_offset = tcph->doff * 4;
-
-        if (tcph->doff < 5 || tcph->doff > 15 || ((unsigned char *)tcph + data_offset) > data_end)
+        tcph = args->trans_data;
+        if (tcph + 1 > args->data_end) {
             return;
-
-        dstport = ntohs(tcph->dest);
-        srcport = ntohs(tcph->source);
+        }
+        dstport = bpf_ntohs(tcph->dest);
+        srcport = bpf_ntohs(tcph->source);
         if (tcph->syn & TCP_FLAGS) { controlbit = controlbit | TH_SYN; }
         if (tcph->fin & TCP_FLAGS) { controlbit = controlbit | TH_FIN; }
         if (tcph->rst & TCP_FLAGS) { controlbit = controlbit | TH_RST; }
@@ -217,9 +213,9 @@ static void parse_port(void *trans_data, void *data_end, u8 proto,
         srcport = 0;
         break;
     }
-    *dport = dstport;
-    *sport = srcport;
-    *control_bit = controlbit;
+    *(args->dport) = dstport;
+    *(args->sport) = srcport;
+    *(args->control_bit) = controlbit;
     return ;
 }
 
@@ -250,18 +246,24 @@ void parse_ipv4(struct __sk_buff *skb, u64 l3_offset)
     u16 control_bit = 0;
     u16 icmp_type = 0;
 
-    u8 l4_offset = iph->ihl * 4; // ipv4 header length
-
-    /* Check if it is a valid IPv4 packet */
-    if (iph->ihl < 5 || iph->ihl > 15 || ((unsigned char *)iph + l4_offset) > data_end)
+    if (iph + 1 > data_end)
         return;
- 
-    void *thdr = ((unsigned char *)iph + l4_offset); // transport layer header
-    
-    if(iph->protocol == ICMP)
-        parse_icmp_type(thdr, data_end, &icmp_type);
 
-    parse_port(thdr, data_end, iph->protocol,  &dport, &sport, &control_bit);
+    if(iph->protocol == ICMP)
+        parse_icmp_type(iph+1, data_end, &icmp_type);
+
+    struct parse_port_args port_args;
+    port_args.trans_data = iph+1;
+    port_args.data_end = data_end;
+    port_args.proto = iph->protocol;
+    port_args.dport = &dport;
+    port_args.sport = &sport;
+    port_args.control_bit = &control_bit;
+    parse_port(&port_args);
+    data_end =port_args.data_end;
+    dport = *port_args.dport;
+    sport = *port_args.sport;
+    control_bit = *port_args.control_bit;
 
     memset(&flow_key, 0, sizeof(flow_key));
     flow_key.sa = iph->saddr;
@@ -306,12 +308,12 @@ static __always_inline bool parse_ingress_eth(struct ethhdr *eth, void *data_end
 
     /* TODO: Handle Vlan packet */
 
-    *eth_proto = ntohs(eth_type);
+    *eth_proto = bpf_ntohs(eth_type);
     *l3_offset = offset;
     return true;
 }
 
-SEC("ingress_flow_monitoring")
+SEC("tc_ingress_flow_monitoring")
 int _ingress_flow_monitoring(struct __sk_buff *skb)
 {
     void *data     = (void *)(long)skb->data;
@@ -333,3 +335,4 @@ int _ingress_flow_monitoring(struct __sk_buff *skb)
 }
 
 char _license[] SEC("license") = "Dual BSD/GPL";
+

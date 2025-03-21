@@ -7,13 +7,17 @@
 #define PATH_PROCNET_TCP6 "/proc/net/tcp6"
 #define MIN_TCP_FIELDS 10
 #define IPV4_OCTETS 4
-#define MAP_COUNT 6
+#define MAP_COUNT 7
 #define ipv4_lo_addr 0x7f
 #define ipv6_lo_addr 0x1
+#define MAP_PATH_SIZE 4096
+#define PORT_LENGTH 2048
 
-
-/* XDP program that is next in the chain */
-const char *xdp_cl_ingress_next_prog = "/sys/fs/bpf/xdp_cl_ingress_next_prog";
+/* map names */
+static const char *conn_count_map_name = "cl_conn_count";
+static const char *tcp_conns_map_name = "cl_tcp_conns";
+static const char *conn_info_map_name = "cl_conn_info";
+static const char map_base_dir[] = "/sys/fs/bpf";
 
 /* Port separator */
 const char delim[] = ",";

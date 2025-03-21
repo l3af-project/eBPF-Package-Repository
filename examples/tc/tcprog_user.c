@@ -21,7 +21,6 @@ static const char *__doc__ =
 #include "bpf_util.h"
 #include "bpf/bpf.h"
 #include "bpf/libbpf.h"
-#include "bpf_load.h"
 
 #define CMD_MAX          2048
 #define CMD_MAX_TC       256
@@ -42,51 +41,6 @@ enum iface_dir direction;
 
 static char ifname[IF_NAMESIZE];
 static int ifindex;
-static char tc_cmd[CMD_MAX_TC] = "tc";
-static char prev_prog_map[1024];
-
-/* This method is to link the current program fd with previous program map. */
-static int  tc_chain_bpf(const char *map_name, const char *bpf_obj, const char *sec) {
-    char cmd[CMD_MAX];
-    int ret = 0;
-
-    memset(&cmd, 0, CMD_MAX);
-    snprintf(cmd, CMD_MAX,
-             "%s exec bpf graft %s key 0 obj %s sec %s",
-             tc_cmd, map_name, bpf_obj, sec);
-
-    printf(" - Run: %s\n", cmd);
-    ret = system(cmd);
-
-    if (ret) {
-        fprintf(stderr, "tc chain bpf program Cmdline:%s",cmd);
-    }
-
-    return ret;
-}
-
-/* This method to unlink the bpf program from the chain */
-static int tc_remove_chain(const char *map_file) {
-    int ret;
-    int key = 0;
-    int map_fd = bpf_obj_get(map_file);
-    if (map_fd < 0) {
-        fprintf(stderr,"map_fd of map not found: %s\n", map_file);
-        return -1;
-    }
-
-    ret = bpf_map_delete_elem(map_fd, &key);
-    if (ret != 0) {
-        fprintf( stderr, "tc chain remove pass through program failed");
-    }
-
-    // close map handle
-    close(map_fd);
-    
-   // remove map file
-    remove(map_file);
-    return ret;
-}
 
 static int get_length(const char *str)
 {
@@ -110,7 +64,7 @@ static bool validate_ifname(const char *input_ifname, char *output_ifname) {
     for (i = 0; i < len; i++) {
         char c = input_ifname[i];
 
-        if (!(isalpha(c) || isdigit(c)))
+        if (!(isalpha(c) || isdigit(c) || c == '-'))
             return false;
     }
     strncpy(output_ifname, input_ifname, len);
@@ -122,7 +76,6 @@ static const struct option long_options[] = {
         {"help",      no_argument,       NULL, 'h'},
         {"iface",     required_argument, NULL, 'i'},
         {"direction", optional_argument, NULL, 'd'},
-        {"map-name",   optional_argument, NULL, 'm'},
         {0,           0,                 NULL, 0}
 };
 
@@ -146,8 +99,6 @@ static void usage(char *argv[]) {
 static void signal_handler(int signo)
 {
     printf("Received signal %d", signo);
-
-    tc_remove_chain(prev_prog_map);
 
     exit(EXIT_SUCCESS);
 }
@@ -199,36 +150,11 @@ int main(int argc, char **argv) {
                     return EXIT_FAILURE;
                 }
                 break;
-            case 'm':
-                if(optarg) { /* Previous ebpf program's map name to chain */
-                     len = get_length(optarg);
-                     strncpy(prev_prog_map, optarg, len);
-                     prev_prog_map[len] = '\0';
-                 }
-                 break;
             case 'h':
             default:
                 usage(argv);
                 return EXIT_FAILURE;
         }
-    }
-
-    switch (direction) {
-        case INGR:
-           if (tc_chain_bpf(prev_prog_map, ingress_filename, INGRESS_SEC) != 0) {
-                fprintf(stderr, "tc program chaining ingress failed\n");
-                return EXIT_FAILURE;
-            }
-            break;
-        case EGR:
-           if (tc_chain_bpf(prev_prog_map, egress_filename, EGRESS_SEC) != 0) {
-                fprintf(stderr, "tc program chaining egress failed\n");
-                return EXIT_FAILURE;
-            }
-            break;
-        default:
-            printf("Unknown direction\n");
-            break;
     }
 
     /* Handle signals and exit clean */
@@ -238,6 +164,7 @@ int main(int argc, char **argv) {
 
     while(1)
     {
+        /* business logic */
         sleep(60);
     }
 
