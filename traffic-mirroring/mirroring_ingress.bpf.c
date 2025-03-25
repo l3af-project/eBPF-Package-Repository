@@ -10,7 +10,6 @@
 #include "vmlinux.h"
 #include "bpf_endian.h"
 #include "bpf_helpers.h"
-#include "bpf/bpf.h"
 #define ETH_P_IP	0x0800		/* Internet Protocol packet	*/
 #define ETH_P_ARP	0x0806		/* Address Resolution packet	*/
 #define ETH_HLEN	14		/* Total octets in header.	 */
@@ -27,7 +26,7 @@ struct saddr_key {
 };
 
 #define MAX_ADDRESSES 50
-#define KEY_SIZE_IPV4 sizeof(struct bpf_lpm_trie_key) + sizeof(__u32)
+#define KEY_SIZE_IPV4 sizeof(struct bpf_lpm_trie_key_hdr) + sizeof(__u32)
 
 struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
