@@ -16,7 +16,7 @@ jobs:
       BUILD_PLATFORM: x64
 
     steps:
-      - uses: actions/checkout@b0e28b5ac45a892f91e7d036f8200cf5ed489415
+      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5
         with:
           submodules: "recursive"
 
