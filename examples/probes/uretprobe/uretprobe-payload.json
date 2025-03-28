@@ -1,0 +1,21 @@
+[
+  {
+    "host_name" : "l3af-local-test",
+    "iface" : "enp0s3",
+    "bpf_programs" : {
+      "probes" : [{
+        "name": "bzip2-uretprobe",
+        "artifact": "l3af_uretprobe.tar.gz",
+        "version": "latest",
+        "admin_status": "enabled",
+        "prog_type": "uretprobe",
+        "cfg_version": 1,
+        "monitor_maps": [
+        ],
+        "object_file": "uretprobe.bpf.o",
+        "entry_function_name": "bz2_read_close"
+      }
+      ]
+    }
+  }
+]
