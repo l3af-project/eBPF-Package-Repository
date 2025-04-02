@@ -75,7 +75,7 @@ jobs:
           rm -rf bpftool
 
       - name: Clone kernel function repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
 
