@@ -12,7 +12,7 @@ jobs:
       matrix:
         codename: [ jammy, noble ]
     container:
-      image: ubuntu:focal
+      image: ubuntu:${{ matrix.codename }}
     steps:
       - name: Set env variables
         run: |
