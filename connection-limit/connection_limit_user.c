@@ -22,6 +22,7 @@
 #include <string.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
