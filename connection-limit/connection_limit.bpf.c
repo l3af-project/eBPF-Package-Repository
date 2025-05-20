@@ -6,8 +6,8 @@
 #define KBUILD_MODNAME "foo"
 //#include <net/sock.h>
 #include "vmlinux.h"
-#include "bpf_helpers.h"
-#include "bpf_endian.h"
+#include "bpf/bpf_helpers.h"
+#include "bpf/bpf_endian.h"
 
 /* TCP flags */
 #define TCP_FIN  0x01
