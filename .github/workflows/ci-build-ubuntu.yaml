@@ -57,12 +57,6 @@ jobs:
         run: |
           git clone --branch v6.8 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
           cd $LINUX_SRC_PATH
-          #   sed -i '229a\
-          #        if [ "${pahole_ver}" -ge "124" ]; then\
-          #                extra_paholeopt="${extra_paholeopt} --skip_encoding_btf_enum64"\
-          #        fi' scripts/link-vmlinux.sh
-          # echo "CONFIG_DEBUG_INFO_BTF=y" >> .config
-          #echo "CONFIG_MODULES=y" >> .config
           make olddefconfig
           make prepare
           yes | make -j$(nproc)
