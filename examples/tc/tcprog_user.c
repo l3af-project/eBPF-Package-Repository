@@ -17,8 +17,7 @@ static const char *__doc__ =
 #include <signal.h>
 #include <string.h>
 #include <time.h>
-
-#include "bpf_util.h"
+#include <stdlib.h> 
 #include "bpf/bpf.h"
 #include "bpf/libbpf.h"
 

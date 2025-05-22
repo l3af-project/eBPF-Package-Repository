@@ -41,6 +41,8 @@
  **********************************************************/
 
 #define _XOPEN_SOURCE
+#define _GNU_SOURCE
+#define _POSIX_C_SOURCE 200809L
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
