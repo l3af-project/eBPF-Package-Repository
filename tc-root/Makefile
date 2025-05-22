@@ -10,7 +10,7 @@ USER_OBJ     :=
 
 KERNEL_RELEASE := $(shell uname -r)
 LIB_PATH     := /usr/src/linux-headers-$(KERNEL_RELEASE)
-BPF_CFLAGS   := -g -O2 -target bpf -D__TARGET_ARCH_x86 -I.
+BPF_CFLAGS   := -g -O2 -target bpf  -I.
 BPF_CFLAGS += -I$(LIB_PATH)/tools/testing/selftests/bpf/
 BPF_CFLAGS += -I$(LIB_PATH)/tools/lib/
 BPF_CFLAGS += -I$(LIB_PATH)/tools/include
@@ -57,7 +57,7 @@ $(BPF_OBJ): $(BPF_PROG) $(LIB_PATH)/tools/vmlinux.h
 		$(BPF_CLANG) $(BPF_CFLAGS) -c $< -o $@
 		$(BPF_OBJCOPY) --strip-unneeded $@
 
-$(USER_OBJ): $(USER_PROG).c
+$(USER_OBJ): $(USER_PROG)
 		$(BPF_CLANG) $(USER_CFLAGS) $< -o $@ $(USER_LDFLAGS)
 
 tar.zip:
