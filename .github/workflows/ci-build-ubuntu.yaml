@@ -69,7 +69,7 @@ jobs:
 
       - name: Build eBPF Program and Upload artifacts
         run: |
-          cd $LINUX_SRC_PATH/$BPF_PATH/$REPO
+          cd $REPO
           bash buildscript.sh
 
       - name: Upload xdp-root
