@@ -53,7 +53,7 @@ $(LIB_PATH)/tools/vmlinux.h:
 		bpftool btf dump file /sys/kernel/btf/vmlinux format c > $@;
 
 $(BPF_OBJ): $(BPF_PROG) $(LIB_PATH)/tools/vmlinux.h
-		$(BPF_CLANG) $(BPF_CFLAGS) -c $< -o $@
+		$(BPF_CLANG) $(BPF_CFLAGS) -emit-llvm -c $< -o - | llc -march=bpf -filetype=obj -o $@
 
 $(USER_OBJ): $(USER_PROG)
 		$(BPF_CLANG) $(USER_CFLAGS) $< -o $@ $(USER_LDFLAGS)

@@ -72,7 +72,7 @@ $(LIB_PATH)/tools/vmlinux.h:
 		bpftool btf dump file /sys/kernel/btf/vmlinux format c > $@;
 
 $(BPF_OBJ): $(BPF_PROG) $(LIB_PATH)/tools/vmlinux.h
-		$(BPF_CLANG) $(BPF_CFLAGS) -c $< -o $@
+		$(BPF_CLANG) $(BPF_CFLAGS) -emit-llvm -c $< -o - | llc -march=bpf -filetype=obj -o $@
 
 $(USER_OBJ): $(USER_PROG)
 		$(BPF_CLANG) $(USER_CFLAGS) $< -o $@ $(USER_LDFLAGS)
@@ -90,9 +90,9 @@ tar.zip:
 clean:
 	@find $(CURDIR) -type f -name '*~' -delete
 	@rm -f ./*.o
-	@rm -f mirroring
-	@rm -f l3af_traffic_mirroring.tar.gz
-	@rm -rf l3af_traffic_mirroring
+	@rm -f $(L3AF_SRC_PATH)/mirroring
+	@rm -f  $(L3AF_SRC_PATH)/l3af_traffic_mirroring.tar.gz
+	@rm -rf $(L3AF_SRC_PATH)/l3af_traffic_mirroring
 
 
 

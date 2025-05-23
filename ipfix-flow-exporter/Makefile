@@ -11,7 +11,7 @@ USER_OBJ_EGRESS      :=  bpf_ipfix_egress
 
 KERNEL_RELEASE := $(shell uname -r)
 LIB_PATH     := /usr/src/linux-headers-$(KERNEL_RELEASE)
-BPF_CFLAGS   := -g -O2 -target bpf  -I.
+BPF_CFLAGS   := -g -O2 -target bpf  -I. -Wall
 BPF_CFLAGS += -I$(LIB_PATH)/tools/testing/selftests/bpf/
 BPF_CFLAGS += -I$(LIB_PATH)/tools/lib/
 BPF_CFLAGS += -I$(LIB_PATH)/tools/include
@@ -55,7 +55,7 @@ $(LIB_PATH)/tools/vmlinux.h:
 		bpftool btf dump file /sys/kernel/btf/vmlinux format c > $@;
 
 $(BPF_OBJ): $(BPF_PROG) $(LIB_PATH)/tools/vmlinux.h
-		$(BPF_CLANG) $(BPF_CFLAGS) -c $< -o $@
+		$(BPF_CLANG) $(BPF_CFLAGS) -emit-llvm -c $< -o - | llc -march=bpf -filetype=obj -o $@
 
 $(USER_OBJ_INGRESS): $(USER_PROG_INGRESS)
 		$(BPF_CLANG) $(USER_CFLAGS) $(USER_PROG_INGRESS) -o $@ $(USER_LDFLAGS)
@@ -78,4 +78,5 @@ clean:
 	@find $(CURDIR) -type f -name '*~' -delete
 	@rm -f ./*.o
 	@rm -f l3af_bpf_ipfix.tar.gz
+	@rm -rf l3af_bpf_ipfix/
 	@rm -f bpf_ipfix_ingress bpf_ipfix_egress
