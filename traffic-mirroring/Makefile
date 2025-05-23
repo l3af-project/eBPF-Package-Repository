@@ -1,15 +1,12 @@
 # SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 BPF_CLANG    ?= clang
-BPF_OBJCOPY  ?= llvm-objcopy
-BPF_PROG     := mirroring_ingress.bpf.c mirroring_egress.bpf.c
 USER_PROG    := mirroring.c
-
-BPF_OBJ      := mirroring_ingress.bpf.o mirroring_egress.bpf.o
 USER_OBJ     := mirroring
-
-
 KERNEL_RELEASE := $(shell uname -r)
 LIB_PATH     := /usr/src/linux-headers-$(KERNEL_RELEASE)
+L3AF_SRC_PATH := $(CURDIR)
+BPF_OBJ := mirroring_ingress.bpf.o mirroring_egress.bpf.o
+
 BPF_CFLAGS   := -g -O2 -target bpf -I.
 BPF_CFLAGS += -I$(LIB_PATH)/tools/testing/selftests/bpf/
 BPF_CFLAGS += -I$(LIB_PATH)/tools/lib/
@@ -32,9 +29,7 @@ LINUX_VERSION_CODE := $(shell echo "$$(( ($(KERNEL_MAJOR) << 16) + ($(KERNEL_MIN
 # Optional: print it
 $(info Detected kernel version: $(KERNEL_MAJOR).$(KERNEL_MINOR).$(KERNEL_PATCH))
 $(info Computed LINUX_VERSION_CODE: $(LINUX_VERSION_CODE))
-
 BPF_CFLAGS += -DLINUX_VERSION_CODE=$(LINUX_VERSION_CODE)
-
 
 
 ARCH := $(shell uname -m)
@@ -61,18 +56,15 @@ USER_CFLAGS += -I$(LIB_PATH)/tools/include
 USER_CFLAGS += -I$(LIB_PATH)/tools/perf 
 USER_LDFLAGS := -lbpf -lelf -lz
 
-L3AF_SRC_PATH := $(CURDIR)
-
-TOOLS_PATH := $(LIB_PATH)/tools
-
 all: $(BPF_OBJ) $(USER_OBJ) tar.zip
 
 $(LIB_PATH)/tools/vmlinux.h: 
 		@echo " Generating vmlinux.h" $@ 
 		bpftool btf dump file /sys/kernel/btf/vmlinux format c > $@;
 
-$(BPF_OBJ): $(BPF_PROG) $(LIB_PATH)/tools/vmlinux.h
-		$(BPF_CLANG) $(BPF_CFLAGS) -emit-llvm -c $< -o - | llc -march=bpf -filetype=obj -o $@
+%.bpf.o: %.bpf.c $(LIB_PATH)/tools/vmlinux.h
+	@echo "Compiling BPF program: $< -> $@"
+	$(BPF_CLANG) $(BPF_CFLAGS) -emit-llvm -c $< -o - | llc -march=bpf -filetype=obj -o $@
 
 $(USER_OBJ): $(USER_PROG)
 		$(BPF_CLANG) $(USER_CFLAGS) $< -o $@ $(USER_LDFLAGS)
@@ -93,8 +85,3 @@ clean:
 	@rm -f $(L3AF_SRC_PATH)/mirroring
 	@rm -f  $(L3AF_SRC_PATH)/l3af_traffic_mirroring.tar.gz
 	@rm -rf $(L3AF_SRC_PATH)/l3af_traffic_mirroring
-
-
-
-
-

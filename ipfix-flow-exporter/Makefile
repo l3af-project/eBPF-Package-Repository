@@ -1,16 +1,15 @@
 # SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 BPF_CLANG    ?= clang
-BPF_OBJCOPY  ?= llvm-objcopy
-BPF_PROG     := bpf_ipfix_ingress.bpf.c bpf_ipfix_egress.bpf.c
 USER_PROG_INGRESS    := bpf_ipfix_ingress_user.c bpf_ipfix_user.c ipfix.c
 USER_PROG_EGRESS     := bpf_ipfix_egress_user.c bpf_ipfix_user.c ipfix.c
-
-BPF_OBJ      := bpf_ipfix_ingress.bpf.o bpf_ipfix_egress.bpf.o
 USER_OBJ_INGRESS     :=  bpf_ipfix_ingress 
 USER_OBJ_EGRESS      :=  bpf_ipfix_egress
-
+BPF_OBJ := bpf_ipfix_ingress.bpf.o  bpf_ipfix_egress.bpf.o
 KERNEL_RELEASE := $(shell uname -r)
 LIB_PATH     := /usr/src/linux-headers-$(KERNEL_RELEASE)
+L3AF_SRC_PATH := $(CURDIR)
+
+# BPF FLAGS
 BPF_CFLAGS   := -g -O2 -target bpf  -I. -Wall
 BPF_CFLAGS += -I$(LIB_PATH)/tools/testing/selftests/bpf/
 BPF_CFLAGS += -I$(LIB_PATH)/tools/lib/
@@ -44,9 +43,6 @@ USER_CFLAGS += -I$(LIB_PATH)/tools/include
 USER_CFLAGS += -I$(LIB_PATH)/tools/perf 
 USER_LDFLAGS := -lbpf -lelf -lz -lcrypto
 
-L3AF_SRC_PATH := $(CURDIR)
-
-TOOLS_PATH := $(LIB_PATH)/tools
 
 all: $(BPF_OBJ) $(USER_OBJ_INGRESS) $(USER_OBJ_EGRESS) tar.zip
 
@@ -54,8 +50,9 @@ $(LIB_PATH)/tools/vmlinux.h:
 		@echo " Generating vmlinux.h" $@ 
 		bpftool btf dump file /sys/kernel/btf/vmlinux format c > $@;
 
-$(BPF_OBJ): $(BPF_PROG) $(LIB_PATH)/tools/vmlinux.h
-		$(BPF_CLANG) $(BPF_CFLAGS) -emit-llvm -c $< -o - | llc -march=bpf -filetype=obj -o $@
+%.bpf.o: %.bpf.c $(LIB_PATH)/tools/vmlinux.h
+	@echo "Compiling BPF program: $< -> $@"
+	$(BPF_CLANG) $(BPF_CFLAGS) -emit-llvm -c $< -o - | llc -march=bpf -filetype=obj -o $@
 
 $(USER_OBJ_INGRESS): $(USER_PROG_INGRESS)
 		$(BPF_CLANG) $(USER_CFLAGS) $(USER_PROG_INGRESS) -o $@ $(USER_LDFLAGS)
