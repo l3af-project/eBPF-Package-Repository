@@ -55,7 +55,6 @@ $(LIB_PATH)/tools/vmlinux.h:
 
 $(BPF_OBJ): $(BPF_PROG) $(LIB_PATH)/tools/vmlinux.h
 		$(BPF_CLANG) $(BPF_CFLAGS) -c $< -o $@
-		$(BPF_OBJCOPY) --strip-unneeded $@
 
 $(USER_OBJ): $(USER_PROG)
 		$(BPF_CLANG) $(USER_CFLAGS) $< -o $@ $(USER_LDFLAGS)

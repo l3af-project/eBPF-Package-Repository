@@ -51,16 +51,9 @@ jobs:
           dwarves \
           zlib1g  \
           libelf1 \
-          pkg-config
-
-      - name: Clone dependencies
-        run: |
-          git clone --branch v6.8 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
-          cd $LINUX_SRC_PATH
-          make olddefconfig
-          make prepare
-          yes | make -j$(nproc)
-          make headers_install
+          pkg-config \
+          libbpf-dev \
+          libzstd-dev
 
       - name: Install bpftool
         run: |
@@ -74,11 +67,11 @@ jobs:
       - name: Clone kernel function repository
         uses: actions/checkout@v4.2.2
         with:
-          path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
+          path: ${{ env.REPO }}
 
       - name: Build eBPF Program and Upload artifacts
         run: |
-          cd $LINUX_SRC_PATH/$BPF_PATH/$REPO
+          cd $REPO
           bash buildscript.sh
 
       - name: Upload xdp-root
