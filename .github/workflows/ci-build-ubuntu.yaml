@@ -8,8 +8,11 @@ on:
 jobs:
   eBPF-Programs-Build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        codename: [ jammy, noble ]
     container:
-      image: ubuntu:focal
+      image: ubuntu:${{ matrix.codename }}
     steps:
       - name: Set env variables
         run: |
@@ -52,14 +55,8 @@ jobs:
 
       - name: Clone dependencies
         run: |
-          git clone --branch v5.15 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
+          git clone --branch v6.8 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
           cd $LINUX_SRC_PATH
-          sed -i '229a\
-                  if [ "${pahole_ver}" -ge "124" ]; then\
-                          extra_paholeopt="${extra_paholeopt} --skip_encoding_btf_enum64"\
-                  fi' scripts/link-vmlinux.sh
-          echo "CONFIG_DEBUG_INFO_BTF=y" >> .config
-          echo "CONFIG_MODULES=y" >> .config
           make olddefconfig
           make prepare
           yes | make -j$(nproc)
@@ -87,35 +84,35 @@ jobs:
       - name: Upload xdp-root
         uses: actions/upload-artifact@v4
         with:
-          name: xdp-root-linux-artifact
+          name: xdp-root-linux-artifact-${{ matrix.codename }}
           path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/xdp-root/l3af_xdp_root/*
 
       - name: Upload ratelimiting
         uses: actions/upload-artifact@v4
         with:
-          name: ratelimiting-linux-artifact
+          name: ratelimiting-linux-artifact-${{ matrix.codename }} 
           path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/ratelimiting/l3af_ratelimiting/*
 
       - name: Upload connection-limit
         uses: actions/upload-artifact@v4
         with:
-          name: connection-limit-linux-artifact
+          name: connection-limit-linux-artifact-${{ matrix.codename }} 
           path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/connection-limit/l3af_connection_limit/*
 
       - name: Upload tc-root
         uses: actions/upload-artifact@v4
         with:
-          name: tc-root-linux-artifact
+          name: tc-root-linux-artifact-${{ matrix.codename }}
           path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/tc-root/l3af_tc_root/*
 
       - name: Upload ipfix-flow-exporter
         uses: actions/upload-artifact@v4
         with:
-          name: ipfix-flow-exporter-linux-artifact
+          name: ipfix-flow-exporter-linux-artifact-${{ matrix.codename }}
           path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/ipfix-flow-exporter/l3af_bpf_ipfix/*
 
       - name: Upload traffic-mirroring
         uses: actions/upload-artifact@v4
         with:
-          name: traffic-mirroring-linux-artifact
+          name: traffic-mirroring-linux-artifact-${{ matrix.codename }} 
           path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/traffic-mirroring/l3af_traffic_mirroring/*
