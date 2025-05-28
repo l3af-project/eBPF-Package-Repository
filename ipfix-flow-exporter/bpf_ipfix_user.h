@@ -27,7 +27,6 @@
 #include "p2f.h"
 #include "ipfix.h"
 #include "log.h"
-#include "bpf_util.h"
 
 #define IPFIX_EXPORT_INGRESS_LOCAL_PORT 4755
 #define IPFIX_EXPORT_EGRESS_LOCAL_PORT 4756

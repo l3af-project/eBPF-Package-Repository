@@ -9,6 +9,6 @@ declare -a progs=("xdp-root" "ratelimiting" "connection-limit" "tc-root" "ipfix-
 for prog in "${progs[@]}"
 do
 	cd $prog
-	make
+	make $1
 	cd ../
 done

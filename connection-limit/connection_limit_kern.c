@@ -275,7 +275,7 @@ int _xdp_limit_conn(struct xdp_md *ctx)
 
     /* Check if its valid ip packet */
     struct iphdr *iph = (struct iphdr *)(data + sizeof(struct ethhdr));
-    if (iph + 1 > data_end)
+    if ((void *) (iph + 1) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP packets */

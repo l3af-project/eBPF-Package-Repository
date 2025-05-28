@@ -6,8 +6,8 @@
 
 #define KBUILD_MODNAME "foo"
 #include "vmlinux.h"
-#include "bpf_helpers.h"
-#include "bpf_endian.h"
+#include "bpf/bpf_helpers.h"
+#include "bpf/bpf_endian.h"
 
 /* TCP flags */
 #define TCP_FIN  0x01
@@ -100,7 +100,7 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     /* Ignore other than IP packets */
     struct iphdr *iph = data + sizeof(struct ethhdr);
-    if (iph + 1 > data_end)
+    if ((void *) (iph + 1) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP packets */
@@ -109,7 +109,7 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     /* Check if its valid tcp packet */
     struct tcphdr *tcph = (struct tcphdr *)(iph + 1);
-    if (tcph + 1 > data_end)
+    if ((void *)(tcph + 1) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP-SYN packets */

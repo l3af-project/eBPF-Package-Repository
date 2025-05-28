@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 
 #include "vmlinux.h"
-#include "bpf_helpers.h"
+#include "bpf/bpf_helpers.h"
 
 #define ROOT_ARRAY_SIZE 1
 #define PIN_GLOBAL_NS 2

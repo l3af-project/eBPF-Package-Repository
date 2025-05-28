@@ -4,8 +4,8 @@
 #define KBUILD_MODNAME "foo"
 
 #include "vmlinux.h"
-#include "bpf_helpers.h"
-#include "bpf_endian.h"
+#include "bpf/bpf_helpers.h"
+#include "bpf/bpf_endian.h"
 #include "bpf_ipfix_kern_common.h"
 #define DEBUG 1
 #define INGRESS 0
@@ -246,7 +246,7 @@ void parse_ipv4(struct __sk_buff *skb, u64 l3_offset)
     u16 control_bit = 0;
     u16 icmp_type = 0;
 
-    if (iph + 1 > data_end)
+    if ((void *) (iph + 1) > data_end)
         return;
 
     if(iph->protocol == ICMP)

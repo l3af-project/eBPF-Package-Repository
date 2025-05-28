@@ -8,17 +8,12 @@
  *          attaching bpf programs.
  */
 #include "vmlinux.h"
-#include "bpf_helpers.h"
-#include "bpf_endian.h"
+#include "bpf/bpf_helpers.h"
+#include "bpf/bpf_endian.h"
 #define ETH_P_IP	0x0800		/* Internet Protocol packet	*/
 #define ETH_P_ARP	0x0806		/* Address Resolution packet	*/
 #define ETH_HLEN	14		/* Total octets in header.	 */
 #define TC_ACT_OK		0
-#define bpf_printk(fmt, ...)                                       \
-    ({                                                             \
-        char ____fmt[] = fmt;                                      \
-        bpf_trace_printk(____fmt, sizeof(____fmt), ##__VA_ARGS__); \
-    })
 
 struct daddr_key {
     __u32 prefix_len;
@@ -26,7 +21,11 @@ struct daddr_key {
 };
 
 #define MAX_ADDRESSES 50
-#define KEY_SIZE_IPV4 sizeof(struct bpf_lpm_trie_key_hdr) + sizeof(__u32)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+#define KEY_SIZE_IPV4 sizeof(struct bpf_lpm_trie_key) + sizeof(__u32)
+#else
+#define KEY_SIZE_IPV4 (sizeof(struct bpf_lpm_trie_key_hdr) + sizeof(__u32))
+#endif
 
 struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);

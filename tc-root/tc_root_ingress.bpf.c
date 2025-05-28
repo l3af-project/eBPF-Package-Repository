@@ -4,13 +4,6 @@
 #define KBUILD_MODNAME "foo"
 
 #include "tc_root_common.h"
-
-#define bpf_printk(fmt, ...)                                    \
-({                                                              \
-   char ____fmt[] = fmt;                            \
-   bpf_trace_printk(____fmt, sizeof(____fmt),       \
-                    ##__VA_ARGS__);                 \
-})
                   
 struct {
         __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
