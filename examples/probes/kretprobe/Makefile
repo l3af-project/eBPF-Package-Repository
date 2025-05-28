@@ -1,3 +1,4 @@
+# Copyright Contributors to the L3AF Project.
 # SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 BPF_CLANG    ?= clang
 BPF_OBJCOPY  ?= llvm-objcopy

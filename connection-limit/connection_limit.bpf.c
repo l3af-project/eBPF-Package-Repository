@@ -4,7 +4,6 @@
 /* TCP Connection Limit
  */
 #define KBUILD_MODNAME "foo"
-//#include <net/sock.h>
 #include "vmlinux.h"
 #include "bpf/bpf_helpers.h"
 #include "bpf/bpf_endian.h"
