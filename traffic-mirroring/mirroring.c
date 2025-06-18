@@ -25,9 +25,9 @@ static const char *__doc__ =
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "bpf/bpf.h"
-#include "bpf_util.h"
 #include "log.h"
 #include "mirroring.h"
 
@@ -121,7 +121,7 @@ int rtattr_add(struct nlmsghdr *n, int maxlen, int type, const void *data,
     if (alen)
     {
         struct rtattr *ptr = RTA_DATA(rta);
-        struct rtattr *d = data;
+        struct rtattr *d = (struct rtattr *)data;
         while (alen--)
         {
             *ptr++ = *d++;

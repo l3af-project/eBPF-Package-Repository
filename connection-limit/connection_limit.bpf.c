@@ -4,10 +4,9 @@
 /* TCP Connection Limit
  */
 #define KBUILD_MODNAME "foo"
-//#include <net/sock.h>
 #include "vmlinux.h"
-#include "bpf_helpers.h"
-#include "bpf_endian.h"
+#include "bpf/bpf_helpers.h"
+#include "bpf/bpf_endian.h"
 
 /* TCP flags */
 #define TCP_FIN  0x01
@@ -27,12 +26,6 @@
 
 #define AF_INET		2	/* Internet IP Protocol 	*/
 #define AF_INET6	10	/* IP version 6			*/
-#define bpf_printk(fmt, ...)                                    \
-({                                                              \
-               char ____fmt[] = fmt;                            \
-               bpf_trace_printk(____fmt, sizeof(____fmt),       \
-                                ##__VA_ARGS__);                 \
-})
 
 struct inet_sock_state_ctx {
     u64 __pad;              // First 8 bytes are not accessible by bpf code
@@ -280,7 +273,7 @@ int _xdp_limit_conn(struct xdp_md *ctx)
 
     /* Check if its valid ip packet */
     struct iphdr *iph = (struct iphdr *)(data + sizeof(struct ethhdr));
-    if (iph + 1 > data_end)
+    if ((void *) (iph + 1) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP packets */
@@ -289,7 +282,7 @@ int _xdp_limit_conn(struct xdp_md *ctx)
 
     /* Check if its valid tcp packet */
     struct tcphdr *tcph = (struct tcphdr *)(iph + 1);
-    if (tcph + 1 > data_end)
+    if ((void *)(tcph + 1) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP-SYN packets */

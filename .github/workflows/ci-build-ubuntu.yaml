@@ -17,8 +17,6 @@ jobs:
       - name: Set env variables
         run: |
           echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
-          echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
-          echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
           echo "DEBIAN_FRONTEND=noninteractive" >> $GITHUB_ENV
           echo "TZ=Etc/UTC" >> $GITHUB_ENV
 
@@ -51,16 +49,9 @@ jobs:
           dwarves \
           zlib1g  \
           libelf1 \
-          pkg-config
-
-      - name: Clone dependencies
-        run: |
-          git clone --branch v6.8 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
-          cd $LINUX_SRC_PATH
-          make olddefconfig
-          make prepare
-          yes | make -j$(nproc)
-          make headers_install
+          pkg-config \
+          libbpf-dev \
+          libzstd-dev
 
       - name: Install bpftool
         run: |
@@ -74,45 +65,45 @@ jobs:
       - name: Clone kernel function repository
         uses: actions/checkout@v4.2.2
         with:
-          path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
+          path: ${{ env.REPO }}
 
       - name: Build eBPF Program and Upload artifacts
         run: |
-          cd $LINUX_SRC_PATH/$BPF_PATH/$REPO
+          cd $REPO
           bash buildscript.sh
 
       - name: Upload xdp-root
         uses: actions/upload-artifact@v4
         with:
           name: xdp-root-linux-artifact-${{ matrix.codename }}
-          path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/xdp-root/l3af_xdp_root/*
+          path: ${{ env.REPO }}/xdp-root/l3af_xdp_root/*
 
       - name: Upload ratelimiting
         uses: actions/upload-artifact@v4
         with:
           name: ratelimiting-linux-artifact-${{ matrix.codename }} 
-          path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/ratelimiting/l3af_ratelimiting/*
+          path: ${{ env.REPO }}/ratelimiting/l3af_ratelimiting/*
 
       - name: Upload connection-limit
         uses: actions/upload-artifact@v4
         with:
           name: connection-limit-linux-artifact-${{ matrix.codename }} 
-          path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/connection-limit/l3af_connection_limit/*
+          path: ${{ env.REPO }}/connection-limit/l3af_connection_limit/*
 
       - name: Upload tc-root
         uses: actions/upload-artifact@v4
         with:
           name: tc-root-linux-artifact-${{ matrix.codename }}
-          path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/tc-root/l3af_tc_root/*
+          path: ${{ env.REPO }}/tc-root/l3af_tc_root/*
 
       - name: Upload ipfix-flow-exporter
         uses: actions/upload-artifact@v4
         with:
           name: ipfix-flow-exporter-linux-artifact-${{ matrix.codename }}
-          path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/ipfix-flow-exporter/l3af_bpf_ipfix/*
+          path: ${{ env.REPO }}/ipfix-flow-exporter/l3af_bpf_ipfix/*
 
       - name: Upload traffic-mirroring
         uses: actions/upload-artifact@v4
         with:
           name: traffic-mirroring-linux-artifact-${{ matrix.codename }} 
-          path: ${{ env.LINUX_SRC_PATH }}/${{ env.BPF_PATH }}/${{ env.REPO }}/traffic-mirroring/l3af_traffic_mirroring/*
+          path: ${{ env.REPO }}/traffic-mirroring/l3af_traffic_mirroring/*

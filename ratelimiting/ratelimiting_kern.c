@@ -99,7 +99,7 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     /* Ignore other than IP packets */
     struct iphdr *iph = data + sizeof(struct ethhdr);
-    if (iph + 1 > data_end)
+    if ((void *) (iph + 1) > data_end)
         return XDP_PASS;
 
     /* Ignore other than TCP packets */
