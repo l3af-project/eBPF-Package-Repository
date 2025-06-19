@@ -18,6 +18,7 @@ static const char *conn_count_map_name = "cl_conn_count";
 static const char *tcp_conns_map_name = "cl_tcp_conns";
 static const char *conn_info_map_name = "cl_conn_info";
 static const char map_base_dir[] = "/sys/fs/bpf";
+static const char *prog_name = "connection-limit";
 
 /* Port separator */
 const char delim[] = ",";
