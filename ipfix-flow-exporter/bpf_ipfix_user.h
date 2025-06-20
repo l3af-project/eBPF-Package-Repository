@@ -40,7 +40,7 @@ extern const char* ipfix_egress_jmp_table;
 extern const char* ingress_dir;
 extern const char* egress_dir;
 static const char map_base_dir[] = "/sys/fs/bpf/tc/globals";
-
+static const char *prog_name = "ipfix-flow-exporter";
 extern bool chain;
 extern char *remote_ip, *bpf_map_file_path, *tc_cmd;
 extern int flow_timeout, remote_port, bpf_map_fd;
@@ -89,9 +89,9 @@ int validate_str(const char *str);
 
 void sig_handler(int signo);
 
-int populate_egress_fds(void);
+int populate_egress_fds(const char *version);
 
-int populate_ingress_fds(void);
+int populate_ingress_fds(const char *version);
 
 void cpy(char *src,char *des);
 
@@ -99,7 +99,7 @@ bool validate_map_name(const char *path);
 
 bool validate_map(const char* input);
 
-int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file);
+int get_bpf_map_file(const char *ifname, const char *version, const char *map_name, char *map_file);
 
 void close_fd(int fd);
 void close_ingress_fds(void);

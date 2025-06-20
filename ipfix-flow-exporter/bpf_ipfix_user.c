@@ -31,6 +31,7 @@ const struct option long_options[] = {
     {"collector_ip", required_argument, NULL, 'c' },
     {"direction", required_argument, NULL, 'd' },
     {"collector_port", required_argument, NULL, 'p' },
+    {"version", required_argument, NULL, 'v'},
     {"flow-timeout", optional_argument, NULL, 't' },
     {"verbose (allowed 0-4, 0-NO_LOG,1-LOG_DEBUG,2-LOG_INFO,3-LOG_WARN,4-LOG_ERR,5-LOG_CRIT)", optional_argument, NULL, 'q' },
     {0, 0, NULL,  0 }
@@ -382,9 +383,9 @@ int get_length(const char *str)
 }
 
 /* Map filepath is created by l3afd */
-int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file)
+int get_bpf_map_file(const char *ifname,  const char *version, const char *map_name, char *map_file)
 {
-    snprintf(map_file, MAP_PATH_SIZE, "%s/%s/%s", map_base_dir, ifname, map_name);
+    snprintf(map_file, MAP_PATH_SIZE, "%s/%s/%s/%s/%s", map_base_dir, ifname, prog_name, version, map_name);
     log_info("map path filename %s", map_file);
     struct stat st = {0};
     if (stat(map_file, &st) != 0) {

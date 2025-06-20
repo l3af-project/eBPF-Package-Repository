@@ -301,6 +301,7 @@ static const struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
     {"iface", required_argument, NULL, 'i'},
     {"redirect-to", required_argument, NULL, 'e'},
+    {"version", required_argument, NULL, 'v'},
     /* HINT assign: optional_arguments with '=' */
     { "direction", optional_argument, NULL, 't' },
     { "src-address", optional_argument, NULL, 's' },
@@ -667,9 +668,9 @@ static void update_proto(int map_fd, char *protocols)
 }
 
 /* validate map file path */
-int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file)
+int get_bpf_map_file(const char *ifname, const char *version, const char *map_name, char *map_file)
 {
-    snprintf(map_file, MAP_PATH_SIZE, "%s/%s/%s", map_base_dir, ifname, map_name);
+    snprintf(map_file, MAP_PATH_SIZE, "%s/%s/%s/%s/%s", map_base_dir, ifname, prog_name, version, map_name);
     log_info("map path filename %s", map_file);
     struct stat st = {0};
     if (stat(map_file, &st) != 0)
@@ -700,6 +701,7 @@ int main(int argc, char **argv)
     int slen = 0, dlen = 0, tmplen = 0, glen = 0;
     int ret = EXIT_SUCCESS;
     char map_file[MAP_PATH_SIZE];
+    char *version;
 
     memset(ifname, 0, IF_NAMESIZE); /* Can be used uninitialized */
     fprintf(stdout, "DEFAULT_LOGFILE is %s\n", DEFAULT_LOGFILE);
@@ -839,6 +841,9 @@ int main(int argc, char **argv)
         case 'q':
             verbose = 0;
             break;
+        case 'v':
+            if(optarg)
+               version = optarg;
         case 'h':
         default:
             usage(argv);
@@ -861,7 +866,7 @@ int main(int argc, char **argv)
     fflush(info);
 
     memset(map_file, '\0', MAP_PATH_SIZE);
-    if (get_bpf_map_file(ifname, redirect_mapfile, map_file) < 0)
+    if (get_bpf_map_file(ifname, version, redirect_mapfile, map_file) < 0)
     {
         log_err("ERROR: map file path (%s) doesn't exists", map_file);
         cleanup();
@@ -880,7 +885,7 @@ int main(int argc, char **argv)
     if (strcmp(direction, INGRESS) == 0)
     {
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, src_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, src_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();
@@ -896,7 +901,7 @@ int main(int argc, char **argv)
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, ingress_src_port_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, ingress_src_port_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();
@@ -912,7 +917,7 @@ int main(int argc, char **argv)
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, ingress_dst_port_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, ingress_dst_port_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();
@@ -927,7 +932,7 @@ int main(int argc, char **argv)
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, ingress_proto_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, ingress_proto_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();
@@ -943,7 +948,7 @@ int main(int argc, char **argv)
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, ingress_any_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, ingress_any_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();
@@ -962,7 +967,7 @@ int main(int argc, char **argv)
     else if (strcmp(direction, EGRESS) == 0)
     {
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, dst_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, dst_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();
@@ -978,7 +983,7 @@ int main(int argc, char **argv)
         }
 
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, egress_src_port_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, egress_src_port_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();
@@ -994,7 +999,7 @@ int main(int argc, char **argv)
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, egress_dst_port_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, egress_dst_port_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();
@@ -1009,7 +1014,7 @@ int main(int argc, char **argv)
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, egress_proto_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, egress_proto_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();
@@ -1024,7 +1029,7 @@ int main(int argc, char **argv)
             ret = EXIT_FAILURE;
         }
         memset(map_file, '\0', MAP_PATH_SIZE);
-        if (get_bpf_map_file(ifname, egress_any_mapfile, map_file) < 0)
+        if (get_bpf_map_file(ifname, version, egress_any_mapfile, map_file) < 0)
         {
             log_err("ERROR: map file path (%s) doesn't exists", map_file);
             cleanup();

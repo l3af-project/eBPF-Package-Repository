@@ -41,14 +41,14 @@ static int is_ipv6_loopback(struct in6_addr *addr6);
 static int str_split(char *input, char *delimiter, char *word_array[]);
 static long strtoi(char *str, int base);
 static void addr6_parser(char *input, struct in6_addr *localaddr);
-int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file);
+int get_bpf_map_file(const char *ifname, const char *version, const char *map_name, char *map_file);
 void close_fd(int fd);
 void close_all_fds(void);
 
 static const struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
     {"iface", required_argument, NULL, 'i'},
-    {"verbose", optional_argument, NULL, 'v'},
+    {"version", required_argument, NULL, 'v'},
     {"direction", optional_argument, NULL, 'd'},
     {0, 0, NULL, 0}};
 
@@ -420,9 +420,9 @@ static void parse_tcp(char *file, int (*proc)(int, char *))
 }
 
 /* Validate map filepath */
-int get_bpf_map_file(const char *ifname, const char *map_name, char *map_file)
+int get_bpf_map_file(const char *ifname, const char *version, const char *map_name,  char *map_file)
 {
-  snprintf(map_file, MAP_PATH_SIZE, "%s/%s/%s", map_base_dir, ifname, map_name);
+  snprintf(map_file, MAP_PATH_SIZE, "%s/%s/%s/%s/%s", map_base_dir, ifname, prog_name, version, map_name);
   log_info("map path filename %s", map_file);
   struct stat st = {0};
   if (stat(map_file, &st) != 0)
@@ -463,6 +463,7 @@ int main(int argc, char **argv)
   char ports[PORT_LENGTH];
   char map_file[MAP_PATH_SIZE];
   char ifname[IF_NAMESIZE];
+  char *version = NULL;
 
   verbosity = LOG_INFO;
 
@@ -484,9 +485,8 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
       }
       break;
-    case 'v':
-      if (optarg)
-        verbosity = (int)(strtoi(optarg, 10));
+    case 'v': /* version variable passed by l3afd */
+      version = optarg;
       break;
     case 'd':
       /* Not honoured as of now */
@@ -501,7 +501,7 @@ int main(int argc, char **argv)
   setrlimit(RLIMIT_MEMLOCK, &r);
 
   memset(map_file, '\0', MAP_PATH_SIZE);
-  if (get_bpf_map_file(ifname, conn_count_map_name, map_file) < 0)
+  if (get_bpf_map_file(ifname, version, conn_count_map_name, map_file) < 0)
   {
     log_err("ERROR: map file path (%s) doesn't exists\n", map_file);
     close_log_file();
@@ -514,7 +514,7 @@ int main(int argc, char **argv)
             strerror(errno), errno);
   }
   memset(map_file, '\0', MAP_PATH_SIZE);
-  if (get_bpf_map_file(ifname, tcp_conns_map_name, map_file) < 0)
+  if (get_bpf_map_file(ifname, version, tcp_conns_map_name, map_file) < 0)
   {
     close_log_file();
     close_all_fds();
@@ -528,7 +528,7 @@ int main(int argc, char **argv)
             strerror(errno), errno);
   }
   memset(map_file, '\0', MAP_PATH_SIZE);
-  if (get_bpf_map_file(ifname, conn_info_map_name, map_file) < 0)
+  if (get_bpf_map_file(ifname, version, conn_info_map_name, map_file) < 0)
   {
     close_log_file();
     close_all_fds();

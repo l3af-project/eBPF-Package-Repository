@@ -32,9 +32,9 @@ void sig_handler(int signo)
     exit(EXIT_SUCCESS);
 }
 
-int populate_ingress_fds(void) {
+int populate_ingress_fds(const char *version) {
     char map_file[MAP_PATH_SIZE];
-    if (get_bpf_map_file(if_name, ingress_bpf_map, map_file) < 0) {
+    if (get_bpf_map_file(if_name, version, ingress_bpf_map, map_file) < 0) {
         fprintf(stderr, "ERROR: map file path (%s) doesn't exists", map_file);
         return EXIT_FAILURE;
     }
@@ -45,7 +45,7 @@ int populate_ingress_fds(void) {
         return EXIT_FAILURE;
     }
 
-    if (get_bpf_map_file(if_name, last_ingress_bpf_map, map_file) < 0) {
+    if (get_bpf_map_file(if_name, version, last_ingress_bpf_map, map_file) < 0) {
         fprintf(stderr, "ERROR: map file path (%s) doesn't exists", map_file);
         return EXIT_FAILURE;
     }
@@ -65,6 +65,7 @@ int main(int argc, char **argv)
     verbosity = LOG_INFO;
     long flow_timeout = 0;
     char *eptr;
+    char *version;
 
     /* Parse commands line args */
     while ((opt = getopt_long(argc, argv, "hq",
@@ -100,9 +101,12 @@ int main(int argc, char **argv)
                 if(optarg)
                     remote_port = (int)(strtol(optarg, &eptr, 10));
                 break;
+            case 'v' :
+                if(optarg)
+                    version = optarg;
             case 'd':
 		/* This option is to have consistancy across NFs */
-		break;
+		    break;
             case 'h':
             default:
                 usage(argv, __doc__);
@@ -117,7 +121,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    if (populate_ingress_fds() == EXIT_FAILURE) {
+    if (populate_ingress_fds(version) == EXIT_FAILURE) {
         fprintf(stderr, "ERR: Fetching TC INGRESS maps failed\n");
         close_logfile();
         close_ingress_fds();
