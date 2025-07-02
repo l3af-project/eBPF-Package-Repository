@@ -33,9 +33,9 @@ void sig_handler(int signo)
     exit(EXIT_SUCCESS);
 }
 
-int populate_egress_fds(void) {
+int populate_egress_fds(const char *version) {
     char map_file[MAP_PATH_SIZE];
-    if (get_bpf_map_file(if_name, egress_bpf_map, map_file) < 0) {
+    if (get_bpf_map_file(if_name, version, egress_bpf_map, map_file) < 0) {
         fprintf(stderr, "ERROR: map file path (%s) doesn't exists", map_file);
         return EXIT_FAILURE;
     }
@@ -47,7 +47,7 @@ int populate_egress_fds(void) {
         return EXIT_FAILURE;
     }
 
-    if (get_bpf_map_file(if_name, last_egress_bpf_map, map_file) < 0) {
+    if (get_bpf_map_file(if_name, version, last_egress_bpf_map, map_file) < 0) {
         fprintf(stderr, "ERROR: map file path (%s) doesn't exists", map_file);
         return EXIT_FAILURE;
     }
@@ -66,6 +66,7 @@ int main(int argc, char **argv)
     verbosity = LOG_INFO;
     long flow_timeout = 0;
     char *eptr;
+    char *version;
     /* Parse commands line args */
     while ((opt = getopt_long(argc, argv, "hq",
                   long_options, &long_index)) != -1) {
@@ -101,7 +102,11 @@ int main(int argc, char **argv)
                     remote_port = (int)(strtol(optarg, &eptr, 10));
                 break;
             case 'd':
-		break;
+	            break;
+            case 'v':
+                if(optarg)
+                    version = optarg;
+                break;
             case 'h':
             default:
                 usage(argv, __doc__);
@@ -116,7 +121,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    if (populate_egress_fds() == EXIT_FAILURE) {
+    if (populate_egress_fds(version) == EXIT_FAILURE) {
         fprintf(stderr, "ERR: Fetching TC EGRESS maps failed\n");
         close_logfile();
         close_egress_fds();

@@ -66,6 +66,7 @@ static const char *ingress_any_mapfile = "ingress_any";
 static const char *egress_any_mapfile = "egress_any";
 static const char map_base_dir[] = "/sys/fs/bpf/tc/globals";
 static int verbose = 1;
+static const char *prog_name = "traffic-mirroring";
 
 static bool validate_ifname(const char* input_ifname, char *output_ifname);
 static bool validate_address(char* input_address, network_addr_t output_address[], int *count);
