@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         configurations: ['Debug', 'Release']
-    runs-on: windows-2019
+    runs-on: windows-2025
     env:
       BUILD_CONFIGURATION: ${{matrix.configurations}}
       BUILD_PLATFORM: x64
