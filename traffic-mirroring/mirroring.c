@@ -844,6 +844,7 @@ int main(int argc, char **argv)
         case 'v':
             if(optarg)
                version = optarg;
+	    break;
         case 'h':
         default:
             usage(argv);
