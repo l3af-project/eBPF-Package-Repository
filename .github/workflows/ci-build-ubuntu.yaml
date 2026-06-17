@@ -63,7 +63,7 @@ jobs:
           rm -rf bpftool
 
       - name: Clone kernel function repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6.0.3
         with:
           path: ${{ env.REPO }}
 
